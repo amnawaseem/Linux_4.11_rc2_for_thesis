@@ -335,6 +335,10 @@ enum zone_type {
 #ifdef CONFIG_ZONE_DEVICE
 	ZONE_DEVICE,
 #endif
+#ifdef CONFIG_ZONE_XEN
+    ZONE_XEN,
+#endif
+
 	__MAX_NR_ZONES
 
 };
@@ -853,6 +857,22 @@ static inline int is_highmem(struct zone *zone)
 #else
 	return 0;
 #endif
+}
+
+static inline int is_zone_xen_idx(enum zone_type idx)
+{
+#ifdef CONFIG_ZONE_XEN
+	return idx == ZONE_XEN;
+#else
+	return 0;
+#endif
+}
+
+static inline int is_zone_xen(struct zone *zone)
+{
+	int zone_id = zone_idx(zone);
+
+	return is_zone_xen_idx(zone_id);
 }
 
 /* These two functions are used to setup the per zone pages min values */

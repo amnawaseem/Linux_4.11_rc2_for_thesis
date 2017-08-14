@@ -1167,6 +1167,9 @@ unsigned int snapshot_additional_pages(struct zone *zone)
 {
 	unsigned int rtree, nodes;
 
+    if (is_zone_xen(zone))
+        return 0;
+
 	rtree = nodes = DIV_ROUND_UP(zone->spanned_pages, BM_BITS_PER_BLOCK);
 	rtree += DIV_ROUND_UP(rtree * sizeof(struct rtree_node),
 			      LINKED_PAGE_DATA_SIZE);

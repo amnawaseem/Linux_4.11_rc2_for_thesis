@@ -11,7 +11,6 @@
  *
  * Thus most bits set go first.
  */
-
 #define __def_gfpflag_names						\
 	{(unsigned long)GFP_TRANSHUGE,		"GFP_TRANSHUGE"},	\
 	{(unsigned long)GFP_TRANSHUGE_LIGHT,	"GFP_TRANSHUGE_LIGHT"}, \
@@ -27,7 +26,6 @@
 	{(unsigned long)GFP_NOWAIT,		"GFP_NOWAIT"},		\
 	{(unsigned long)GFP_DMA,		"GFP_DMA"},		\
 	{(unsigned long)__GFP_HIGHMEM,		"__GFP_HIGHMEM"},	\
-	{(unsigned long)GFP_DMA32,		"GFP_DMA32"},		\
 	{(unsigned long)__GFP_HIGH,		"__GFP_HIGH"},		\
 	{(unsigned long)__GFP_ATOMIC,		"__GFP_ATOMIC"},	\
 	{(unsigned long)__GFP_IO,		"__GFP_IO"},		\
@@ -226,6 +224,14 @@ IF_HAVE_VM_SOFTDIRTY(VM_SOFTDIRTY,	"softdirty"	)		\
 #define IFDEF_ZONE_DMA32(X)
 #endif
 
+
+#ifdef CONFIG_ZONE_XEN
+#define IFDEF_ZONE_XEN(X) X
+#else
+#define IFDEF_ZONE_XEN(X)
+#endif
+
+
 #ifdef CONFIG_HIGHMEM
 #define IFDEF_ZONE_HIGHMEM(X) X
 #else
@@ -235,6 +241,7 @@ IF_HAVE_VM_SOFTDIRTY(VM_SOFTDIRTY,	"softdirty"	)		\
 #define ZONE_TYPE						\
 	IFDEF_ZONE_DMA(		EM (ZONE_DMA,	 "DMA"))	\
 	IFDEF_ZONE_DMA32(	EM (ZONE_DMA32,	 "DMA32"))	\
+	IFDEF_ZONE_XEN(	EM (ZONE_XEN,	 "XEN"))	\
 				EM (ZONE_NORMAL, "Normal")	\
 	IFDEF_ZONE_HIGHMEM(	EM (ZONE_HIGHMEM,"HighMem"))	\
 				EMe(ZONE_MOVABLE,"Movable")

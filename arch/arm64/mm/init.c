@@ -93,10 +93,19 @@ static phys_addr_t __init max_zone_dma_phys(void)
 static void __init zone_sizes_init(unsigned long min, unsigned long max)
 {
 	unsigned long max_zone_pfns[MAX_NR_ZONES]  = {0};
+    phys_addr_t xen_zone_start_addr, xen_zone_size, xen_zone_end_addr;
+    
 
 	if (IS_ENABLED(CONFIG_ZONE_DMA))
 		max_zone_pfns[ZONE_DMA] = PFN_DOWN(max_zone_dma_phys());
 	max_zone_pfns[ZONE_NORMAL] = max;
+#ifdef CONFIG_ZONE_XEN
+    //0xfef00000 is start of dom0 128;  pages i.e. 128 * 4096=0x80000
+    xen_zone_size = 0x80000;
+    xen_zone_start_addr = 0xfef00000 + (CONFIG_XEN_DOM_ID * xen_zone_size);
+    xen_zone_end_addr = xen_zone_start_addr + xen_zone_size;
+    max_zone_pfns[ZONE_XEN] = PFN_DOWN(xen_zone_end_addr) ; 
+#endif
 
 	free_area_init_nodes(max_zone_pfns);
 }

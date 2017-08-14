@@ -232,6 +232,10 @@ static char * const zone_names[MAX_NR_ZONES] = {
 #ifdef CONFIG_ZONE_DEVICE
 	 "Device",
 #endif
+#ifdef CONFIG_ZONE_XEN
+	 "XEN",
+#endif
+
 };
 
 char * const migratetype_names[MIGRATE_TYPES] = {
@@ -1176,7 +1180,7 @@ static void __meminit __init_single_page(struct page *page, unsigned long pfn,
 	INIT_LIST_HEAD(&page->lru);
 #ifdef WANT_PAGE_VIRTUAL
 	/* The shift won't overflow because ZONE_NORMAL is below 4G. */
-	if (!is_highmem_idx(zone))
+	if (!is_highmem_idx(zone)))
 		set_page_address(page, __va(pfn << PAGE_SHIFT));
 #endif
 }
@@ -5203,6 +5207,12 @@ void __meminit memmap_init_zone(unsigned long size, int nid, unsigned long zone,
 	struct memblock_region *r = NULL, *tmp;
 #endif
 
+    if (is_zone_xen_idx(zone)){
+        for (pfn = start_pfn; pfn < end_pfn; pfn++) {
+            __init_single_pfn(pfn, zone, nid);
+        }
+        return;
+    }
 	if (highest_memmap_pfn < end_pfn - 1)
 		highest_memmap_pfn = end_pfn - 1;
 
@@ -5601,7 +5611,8 @@ static void __init find_usable_zone_for_movable(void)
 	for (zone_index = MAX_NR_ZONES - 1; zone_index >= 0; zone_index--) {
 		if (zone_index == ZONE_MOVABLE)
 			continue;
-
+        if (zone_index == ZONE_XEN)
+			continue;
 		if (arch_zone_highest_possible_pfn[zone_index] >
 				arch_zone_lowest_possible_pfn[zone_index])
 			break;
@@ -5816,6 +5827,13 @@ static void __meminit calculate_node_totalpages(struct pglist_data *pgdat,
 		unsigned long zone_start_pfn, zone_end_pfn;
 		unsigned long size, real_size;
 
+       if (is_zone_xen_idx(i)) {
+           zone->zone_start_pfn = arch_zone_lowest_possible_pfn[ZONE_XEN];
+           size = arch_zone_highest_possible_pfn[ZONE_XEN] - zone->zone_start_pfn ;
+           real_size = size;
+           goto init_zone;
+      }
+
 		size = zone_spanned_pages_in_node(pgdat->node_id, i,
 						  node_start_pfn,
 						  node_end_pfn,
@@ -5829,11 +5847,14 @@ static void __meminit calculate_node_totalpages(struct pglist_data *pgdat,
 			zone->zone_start_pfn = zone_start_pfn;
 		else
 			zone->zone_start_pfn = 0;
+init_zone:
 		zone->spanned_pages = size;
 		zone->present_pages = real_size;
-
-		totalpages += size;
-		realtotalpages += real_size;
+        if (!is_zone_xen_idx(i))
+        {
+		    totalpages += size;
+		    realtotalpages += real_size;
+        }
 	}
 
 	pgdat->node_spanned_pages = totalpages;
@@ -5975,7 +5996,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat)
 		struct zone *zone = pgdat->node_zones + j;
 		unsigned long size, realsize, freesize, memmap_pages;
 		unsigned long zone_start_pfn = zone->zone_start_pfn;
-
+        bool zone_kernel = !is_highmem_idx(j) && !is_zone_xen_idx(j);
 		size = zone->spanned_pages;
 		realsize = freesize = zone->present_pages;
 
@@ -5985,7 +6006,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat)
 		 * and per-cpu initialisations
 		 */
 		memmap_pages = calc_memmap_size(size, realsize);
-		if (!is_highmem_idx(j)) {
+		if (zone_kernel) {
 			if (freesize >= memmap_pages) {
 				freesize -= memmap_pages;
 				if (memmap_pages)
@@ -5996,27 +6017,29 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat)
 				pr_warn("  %s zone: %lu pages exceeds freesize %lu\n",
 					zone_names[j], memmap_pages, freesize);
 		}
+        if (!is_zone_xen_idx(j)){
+    		/* Account for reserved pages */
+    		if (j == 0 && freesize > dma_reserve) {
+    			freesize -= dma_reserve;
+    			printk(KERN_DEBUG "  %s zone: %lu pages reserved\n",
+    					zone_names[0], dma_reserve);
+    		}
+            
+    		if (!is_highmem_idx(j))
+    			nr_kernel_pages += freesize;
+    		/* Charge for highmem memmap if there are enough kernel pages */
+    		else if (nr_kernel_pages > memmap_pages * 2)
+    			nr_kernel_pages -= memmap_pages;
+    		nr_all_pages += freesize;
+        }
 
-		/* Account for reserved pages */
-		if (j == 0 && freesize > dma_reserve) {
-			freesize -= dma_reserve;
-			printk(KERN_DEBUG "  %s zone: %lu pages reserved\n",
-					zone_names[0], dma_reserve);
-		}
-
-		if (!is_highmem_idx(j))
-			nr_kernel_pages += freesize;
-		/* Charge for highmem memmap if there are enough kernel pages */
-		else if (nr_kernel_pages > memmap_pages * 2)
-			nr_kernel_pages -= memmap_pages;
-		nr_all_pages += freesize;
 
 		/*
 		 * Set an approximate value for lowmem here, it will be adjusted
 		 * when the bootmem allocator frees pages into the buddy system.
 		 * And all highmem pages will be managed by the buddy system.
 		 */
-		zone->managed_pages = is_highmem_idx(j) ? realsize : freesize;
+		zone->managed_pages = zone_kernel ? realsize : freesize;
 #ifdef CONFIG_NUMA
 		zone->node = nid;
 #endif
@@ -6472,7 +6495,14 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 {
 	unsigned long start_pfn, end_pfn;
 	int i, nid;
-
+#ifdef CONFIG_ZONE_XEN
+    unsigned long start_pfn_xen;
+    phys_addr_t xen_zone_size, xen_zone_start_addr;
+        
+    xen_zone_size = 0x80000;
+    xen_zone_start_addr = 0xfef00000 + (CONFIG_XEN_DOM_ID * xen_zone_size);
+    start_pfn_xen = PFN_DOWN(xen_zone_start_addr) ; 
+#endif
 	/* Record where the zone boundaries are */
 	memset(arch_zone_lowest_possible_pfn, 0,
 				sizeof(arch_zone_lowest_possible_pfn));
@@ -6482,9 +6512,17 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
 	start_pfn = find_min_pfn_with_active_regions();
 
 	for (i = 0; i < MAX_NR_ZONES; i++) {
-		if (i == ZONE_MOVABLE)
+		if (i == ZONE_MOVABLE )
 			continue;
+#ifdef CONFIG_ZONE_XEN
 
+		if (i == ZONE_XEN )
+        { 
+            arch_zone_lowest_possible_pfn[i] = start_pfn_xen ;
+            arch_zone_highest_possible_pfn[i] = max_zone_pfn[i];
+            continue;
+        }
+#endif
 		end_pfn = max(max_zone_pfn[i], start_pfn);
 		arch_zone_lowest_possible_pfn[i] = start_pfn;
 		arch_zone_highest_possible_pfn[i] = end_pfn;
