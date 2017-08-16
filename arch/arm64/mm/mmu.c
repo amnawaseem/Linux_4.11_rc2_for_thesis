@@ -336,7 +336,6 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
 {
 	phys_addr_t kernel_start = __pa_symbol(_text);
 	phys_addr_t kernel_end = __pa_symbol(__init_begin);
-
 	/*
 	 * Take care not to create a writable alias for the
 	 * read-only text and rodata sections of the kernel image.
@@ -382,7 +381,6 @@ static void __init __map_memblock(pgd_t *pgd, phys_addr_t start, phys_addr_t end
 static void __init map_mem(pgd_t *pgd)
 {
 	struct memblock_region *reg;
-
 	/* map all the memory banks */
 	for_each_memblock(memory, reg) {
 		phys_addr_t start = reg->base;
@@ -395,6 +393,17 @@ static void __init map_mem(pgd_t *pgd)
 
 		__map_memblock(pgd, start, end);
 	}
+#ifdef CONFIG_ZONE_XEN
+
+    phys_addr_t xen_zone_start_addr, xen_zone_end_addr;
+    unsigned long xen_start_pfn, xen_end_pfn, xen_zone_size;
+    //0xfef00000 is start of dom0 128;  pages i.e. 128 * 4096=0x80000
+    xen_zone_size = 0x80000;
+    xen_zone_start_addr = 0xfef00000 + (CONFIG_XEN_DOM_ID * xen_zone_size);
+    xen_zone_end_addr = xen_zone_start_addr + xen_zone_size;
+    __map_memblock(pgd, xen_zone_start_addr, xen_zone_end_addr);
+#endif
+
 }
 
 void mark_rodata_ro(void)
