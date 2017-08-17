@@ -519,7 +519,7 @@ void __init xen_evtchn_2l_init(void)
 	evtchn_ops = &evtchn_ops_2l;
 
     // alloc_evtchn_bucket implementation
-    evtchn_domains = xen_remap(0xfee21000, XEN_PAGE_SIZE * 2);
+    evtchn_domains = xen_remap(0xfee41000, XEN_PAGE_SIZE * 2);
 	if ( !evtchn_domains )
 		   return;
 	evtchn_domain_local = evtchn_domains + (EVTCHNS_PER_BUCKET * CONFIG_XEN_DOM_ID) ;

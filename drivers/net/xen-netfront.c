@@ -579,6 +579,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* Drop the packet if no queues are set up */
 	if (num_queues < 1)
 		goto drop;
+    
 	/* Determine which queue to transmit this SKB on */
 	queue_index = skb_get_queue_mapping(skb);
 	queue = &np->queues[queue_index];
@@ -607,15 +608,17 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* The first req should be at least ETH_HLEN size or the packet will be
 	 * dropped by netback.
 	 */
-	if (unlikely(PAGE_SIZE - offset < ETH_HLEN)) {
-		nskb = skb_copy(skb, GFP_ATOMIC);
+	/* Always copy the skb to new memory in ZONE_XEN otherwise it will not be shared*/
+	/* Copy the skb packet to allocated memory from ZONE_XEN */
+	//if (unlikely(PAGE_SIZE - offset < ETH_HLEN)) {
+		nskb = skb_copy(skb, GFP_XEN);
 		if (!nskb)
 			goto drop;
 		dev_kfree_skb_any(skb);
 		skb = nskb;
 		page = virt_to_page(skb->data);
 		offset = offset_in_page(skb->data);
-	}
+	//}
 
 	len = skb_headlen(skb);
 
@@ -1536,7 +1539,7 @@ static int setup_netfront(struct xenbus_device *dev,
 	queue->rx.sring = NULL;
 	queue->tx.sring = NULL;
 
-	txs = (struct xen_netif_tx_sring *)get_zeroed_page(GFP_NOIO | __GFP_HIGH);
+	txs = (struct xen_netif_tx_sring *)get_zeroed_page(GFP_XEN );
 	if (!txs) {
 		err = -ENOMEM;
 		xenbus_dev_fatal(dev, err, "allocating tx ring page");
@@ -1550,7 +1553,7 @@ static int setup_netfront(struct xenbus_device *dev,
 		goto grant_tx_ring_fail;
 	queue->tx_ring_ref = gref;
 
-	rxs = (struct xen_netif_rx_sring *)get_zeroed_page(GFP_NOIO | __GFP_HIGH);
+	rxs = (struct xen_netif_rx_sring *)get_zeroed_page(GFP_XEN);
 	if (!rxs) {
 		err = -ENOMEM;
 		xenbus_dev_fatal(dev, err, "allocating rx ring page");

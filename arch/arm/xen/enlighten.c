@@ -354,7 +354,7 @@ static int __init xen_guest_init(void)
 		xen_efi_runtime_setup();
 
 	//shared_info_page = (struct shared_info *)get_zeroed_page(GFP_KERNEL);
-    Shared_info_pages = (unsigned long)xen_remap(0xfee23000, XEN_PAGE_SIZE * 2);
+    Shared_info_pages = (unsigned long)xen_remap(0xfee43000, XEN_PAGE_SIZE * 2);
     if (!Shared_info_pages) {
 		pr_err("not enough memory\n");
 		return -ENOMEM;
@@ -390,7 +390,7 @@ static int __init xen_guest_init(void)
 		per_cpu(xen_vcpu_id, cpu) = cpu;
 
     //xen_auto_xlat_grant_frames.count = gnttab_max_grant_frames();
-    grant_frames = 0xfee00000;
+    grant_frames = 0xfee00000 + (0x20000 * CONFIG_XEN_DOM_ID) ;
     if (gnttab_setup_auto_xlat_frames(grant_frames))
     {
 		free_percpu(xen_vcpu_info);

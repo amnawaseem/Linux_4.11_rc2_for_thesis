@@ -716,7 +716,7 @@ static int __init xenstored_local_init(void)
 
     //Clears out the xenstore region
     //memset_io((volatile void __iomem *)vaddr, 0, PAGE_SIZE );
-	xen_store_gfn = xen_start_info->store_mfn = 0xfee20000 >> XEN_PAGE_SHIFT;
+	xen_store_gfn = xen_start_info->store_mfn = 0xfee40000 >> XEN_PAGE_SHIFT;
 
 	/* Next allocate a local port which xenstored can bind to */
 	alloc_unbound.dom        = DOMID_SELF;

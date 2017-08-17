@@ -43,7 +43,7 @@ static int xsd_kva_mmap(struct file *file, struct vm_area_struct *vma)
 			    size, vma->vm_page_prot))
 		return -EAGAIN;  */
     if (io_remap_pfn_range(vma, vma->vm_start,
-                    0xfee20000 >> XEN_PAGE_SHIFT,
+                    0xfee40000 >> XEN_PAGE_SHIFT,
                     size, vma->vm_page_prot))
             return -EAGAIN; 
 

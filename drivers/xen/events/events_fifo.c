@@ -118,7 +118,7 @@ static int init_control_block(int cpu,
 	//struct evtchn_init_control init_control;
 	unsigned int i;
 
-    q = xen_remap(0xfee21000 + (0xB000 * CONFIG_XEN_DOM_ID) + (0x8000) +  (sizeof(struct evtchn_fifo_queue) * cpu), sizeof(struct evtchn_fifo_queue));
+    q = xen_remap(0xfee41000 + (0xB000 * CONFIG_XEN_DOM_ID) + (0x8000) +  (sizeof(struct evtchn_fifo_queue) * cpu), sizeof(struct evtchn_fifo_queue));
 	/* Reset the control block and the local HEADs. */
 	clear_page(control_block);
 	for (i = 0; i < EVTCHN_FIFO_MAX_QUEUES; i++){
@@ -174,7 +174,7 @@ static int evtchn_fifo_setup(struct irq_info *info)
 		if (!array_page) {
 		
 			//array_page = (void *)__get_free_page(GFP_KERNEL);
-			array_page = xen_remap(0xfee21000 + (0xB000 * CONFIG_XEN_DOM_ID) + 0x9000 + event_array_pages, XEN_PAGE_SIZE);
+			array_page = xen_remap(0xfee41000 + (0xB000 * CONFIG_XEN_DOM_ID) + 0x9000 + event_array_pages, XEN_PAGE_SIZE);
 			if (array_page == NULL) {
 				ret = -ENOMEM;
 				goto error;
@@ -419,7 +419,7 @@ static int evtchn_fifo_alloc_control_block(unsigned cpu)
 	int ret = -ENOMEM;
 
 	//control_block = (void *)__get_free_page(GFP_KERNEL);
-	control_block  = xen_remap(0xfee21000 + (0xB000 * CONFIG_XEN_DOM_ID) + (0x1000 * cpu), XEN_PAGE_SIZE);
+	control_block  = xen_remap(0xfee41000 + (0xB000 * CONFIG_XEN_DOM_ID) + (0x1000 * cpu), XEN_PAGE_SIZE);
 	if (control_block == NULL)
 		goto error;
 

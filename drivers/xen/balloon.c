@@ -654,7 +654,8 @@ int alloc_xenballooned_pages(int nr_pages, struct page **pages)
 	balloon_stats.target_unpopulated += nr_pages;
 
 	while (pgno < nr_pages) {
-		page = balloon_retrieve(true);
+		//page = balloon_retrieve(true);
+		page = alloc_page(GFP_XEN);
 		if (page) {
 			pages[pgno++] = page;
 #ifdef CONFIG_XEN_HAVE_PVMMU
@@ -696,14 +697,15 @@ void free_xenballooned_pages(int nr_pages, struct page **pages)
 
 	for (i = 0; i < nr_pages; i++) {
 		if (pages[i])
-			balloon_append(pages[i]);
+			//balloon_append(pages[i]);
+			__free_page(pages[i]);
 	}
 
 	balloon_stats.target_unpopulated -= nr_pages;
 
 	/* The balloon may be too large now. Shrink it if needed. */
-	if (current_credit())
-		schedule_delayed_work(&balloon_worker, 0);
+	/*if (current_credit())
+		schedule_delayed_work(&balloon_worker, 0); */
 
 	mutex_unlock(&balloon_mutex);
 }
