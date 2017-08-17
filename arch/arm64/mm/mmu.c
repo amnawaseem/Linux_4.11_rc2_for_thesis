@@ -401,7 +401,11 @@ static void __init map_mem(pgd_t *pgd)
     xen_zone_size = 0x80000;
     xen_zone_start_addr = 0xfef00000 + (CONFIG_XEN_DOM_ID * xen_zone_size);
     xen_zone_end_addr = xen_zone_start_addr + xen_zone_size;
-    __map_memblock(pgd, xen_zone_start_addr, xen_zone_end_addr);
+    //__map_memblock(pgd, xen_zone_start_addr, xen_zone_end_addr);
+    __create_pgd_mapping(pgd, xen_zone_start_addr, __phys_to_virt(xen_zone_start_addr),
+				     xen_zone_end_addr - xen_zone_start_addr, PAGE_KERNEL_NOCACHE,
+				     early_pgtable_alloc,
+				     debug_pagealloc_enabled());
 #endif
 
 }
