@@ -64,7 +64,9 @@ static int xenfs_fill_super(struct super_block *sb, void *data, int silent)
 	};
 
 	return simple_fill_super(sb, XENFS_SUPER_MAGIC,
-			xen_initial_domain() ? xenfs_init_files : xenfs_files);
+		  xen_initial_domain() ? xenfs_init_files : xenfs_files);
+    //return simple_fill_super(sb, XENFS_SUPER_MAGIC, xenfs_init_files );
+
 }
 
 static struct dentry *xenfs_mount(struct file_system_type *fs_type,
