@@ -2157,7 +2157,6 @@ static struct xenbus_driver netfront_driver = {
 	.resume = netfront_resume,
 	.otherend_changed = netback_changed,
 };
-
 static int __init netif_init(void)
 {
 	if (!xen_domain())
@@ -2174,7 +2173,7 @@ static int __init netif_init(void)
 	if (xennet_max_queues == 0)
 		xennet_max_queues = min_t(unsigned int, MAX_QUEUES_DEFAULT,
 					  num_online_cpus());
-
+    
 	return xenbus_register_frontend(&netfront_driver);
 }
 module_init(netif_init);

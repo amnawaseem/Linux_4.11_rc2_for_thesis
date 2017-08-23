@@ -1084,8 +1084,7 @@ int bind_interdomain_evtchn(struct evtchn_bind_interdomain *interdomain)
         if ( !port_is_valid(bind_interdomain.remote_port) )
             return -EINVAL;
         rchn = evtchn_from_port(remote_event_channel,bind_interdomain.remote_port);
-        if ( (rchn->state != ECS_UNBOUND) ||
-				 (rchn->u.unbound.remote_domid != bind_interdomain.remote_dom) )
+        if ( (rchn->state != ECS_UNBOUND))
             return -EINVAL;	
         lchn->u.interdomain.remote_dom  = bind_interdomain.remote_dom;
         lchn->u.interdomain.remote_port = bind_interdomain.remote_port;

@@ -58,6 +58,44 @@ const struct file_operations xsd_kva_file_ops = {
 	.release = xsd_release,
 };
 
+static int xsd_foreign_kva_open(struct inode *inode, struct file *file)
+{
+	file->private_data = (void *)kasprintf(GFP_KERNEL, "0x%p",
+					       xen_store_interface);
+	if (!file->private_data)
+		return -ENOMEM;
+	return 0;
+}
+
+static int xsd_foreign_kva_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	size_t size = vma->vm_end - vma->vm_start;
+
+	if ((size > PAGE_SIZE) || (vma->vm_pgoff != 0))
+		return -EINVAL;
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	/*if (remap_pfn_range(vma, vma->vm_start,
+			    virt_to_pfn(xen_store_interface),
+			    size, vma->vm_page_prot))
+		return -EAGAIN;  */
+    if (io_remap_pfn_range(vma, vma->vm_start,
+                    0xfee45000 >> XEN_PAGE_SHIFT,
+                    size, vma->vm_page_prot))
+            return -EAGAIN; 
+
+
+	return 0;
+}
+
+const struct file_operations xsd_kva_foreign_file_ops = {
+	.open = xsd_foreign_kva_open,
+	.mmap = xsd_foreign_kva_mmap,
+	.read = xsd_read,
+	.release = xsd_release,
+};
+
+
 static int xsd_port_open(struct inode *inode, struct file *file)
 {
 	file->private_data = (void *)kasprintf(GFP_KERNEL, "%d",
