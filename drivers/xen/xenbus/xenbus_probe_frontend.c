@@ -478,7 +478,6 @@ static int __init xenbus_probe_frontend_init(void)
 		return err;
     
 	register_xenstore_notifier(&xenstore_notifier);
-	//frontend_probe_and_watch(&xenstore_notifier,0, NULL );
 
 	return 0;
 }
