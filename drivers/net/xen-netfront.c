@@ -1799,7 +1799,7 @@ static int xennet_create_queues(struct netfront_info *info,
 }
 
 /* Common code used when first setting up, and when resuming. */
-static int talk_to_netback(struct xenbus_device *dev,
+int talk_to_netback(struct xenbus_device *dev,
 			   struct netfront_info *info)
 {
 	const char *message;
@@ -1942,7 +1942,7 @@ abort_transaction_no_dev_fatal:
 	return err;
 }
 
-static int xennet_connect(struct net_device *dev)
+int xennet_connect(struct net_device *dev)
 {
 	struct netfront_info *np = netdev_priv(dev);
 	unsigned int num_queues = 0;
@@ -2176,6 +2176,7 @@ static int __init netif_init(void)
     
 	(void)xenbus_register_frontend(&netfront_driver);
 	xenbus_probe(NULL); 
+    return 0;
 }
 module_init(netif_init);
 
