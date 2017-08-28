@@ -2174,9 +2174,9 @@ static int __init netif_init(void)
 		xennet_max_queues = min_t(unsigned int, MAX_QUEUES_DEFAULT,
 					  num_online_cpus());
     
-	(void)xenbus_register_frontend(&netfront_driver);
-	xenbus_probe(NULL); 
-    return 0;
+	return xenbus_register_frontend(&netfront_driver);
+	//xenbus_probe(NULL); 
+    //return 0;
 }
 module_init(netif_init);
 

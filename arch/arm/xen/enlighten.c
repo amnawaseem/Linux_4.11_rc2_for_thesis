@@ -326,12 +326,20 @@ static void __init xen_dt_guest_init(void)
 
 	xen_events_irq = irq_of_parse_and_map(xen_node, 0);
 }
+static DECLARE_WORK(probe_work, xenbus_probe);
+
+static irqreturn_t irqHandlerBusProbe (int irq, void *dev_id)
+{
+    //xenbus_probe(NULL);
+    schedule_work(&probe_work);
+    return IRQ_HANDLED;
+}
 
 static int __init xen_guest_init(void)
 {
 	//struct xen_add_to_physmap xatp;
     unsigned long grant_frames;
-	int cpu;
+	int cpu,ret;
 
 	if (!xen_domain())
 		return 0;
@@ -404,8 +412,17 @@ static int __init xen_guest_init(void)
 		return -ENOMEM;
 	} */
 	gnttab_init();
-	/*if (!xen_initial_domain())
-		xenbus_probe(NULL);  */
+	if (!xen_initial_domain())
+    {
+       //xenbus_probe(NULL);  
+       ret = set_ipi_handler(10, &irqHandlerBusProbe, "IPI Handler XEN BUS PROBE");
+       if (ret !=0 ) 
+       {
+           return -EINVAL;
+       }
+
+    }
+		
 
 	/*
 	 * Making sure board specific code will not set up ops for
