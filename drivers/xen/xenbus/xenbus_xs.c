@@ -202,7 +202,6 @@ static void *read_reply(struct xb_req_data *req)
 {
 	while (req->state != xb_req_state_got_reply) {
 		wait_event(req->wq, test_reply(req));
-
 		if (!xenbus_ok())
 			/*
 			 * If we are in the process of being shut-down there is
@@ -264,6 +263,7 @@ static void *xs_wait_for_reply(struct xb_req_data *req, struct xsd_sockmsg *msg)
 static void xs_wake_up(struct xb_req_data *req)
 {
 	wake_up(&req->wq);
+    printk("wake up xs reply\n");
 }
 
 int xenbus_dev_request_and_reply(struct xsd_sockmsg *msg, void *par)
@@ -929,7 +929,8 @@ int xs_init(void)
 	xenwatch_pid = task->pid;
 
 	/* shutdown watches for kexec boot */
-	//xs_reset_watches();
+    if(xen_initial_domain())
+	   xs_reset_watches();
 
 	return 0;
 }

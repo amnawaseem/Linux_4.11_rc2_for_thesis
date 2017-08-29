@@ -177,7 +177,7 @@ static irqreturn_t evtchn_interrupt(int irq, void *data)
 	WARN(!evtchn->enabled,
 	     "Interrupt for port %d, but apparently not enabled; per-user %p\n",
 	     evtchn->port, u);
-
+    printk("evtchn_interrupt called\n");
 	disable_irq_nosync(irq);
 	evtchn->enabled = false;
 
@@ -234,6 +234,7 @@ static ssize_t evtchn_read(struct file *file, char __user *buf,
 
 		rc = wait_event_interruptible(u->evtchn_wait,
 					      u->ring_cons != u->ring_prod);
+        printk("evtchn_read  got message\n");
 		if (rc)
 			return rc;
 	}

@@ -66,8 +66,8 @@ static irqreturn_t wake_waiting(int irq, void *unused)
 		xenstored_ready = 1;
 		schedule_work(&probe_work);
 	}
-
-	wake_up_interruptible(&xb_waitq);
+    
+	wake_up(&xb_waitq);
 	return IRQ_HANDLED;
 }
 
@@ -419,7 +419,7 @@ static int xenbus_thread(void *unused)
 	while (!kthread_should_stop()) {
 		if (wait_event_interruptible(xb_waitq, xb_thread_work()))
 			continue;
-
+        printk("Got message from xenstore\n");
 		err = process_msg();
 		if (err == -ENOMEM)
 			schedule();
