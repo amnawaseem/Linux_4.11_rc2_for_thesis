@@ -110,13 +110,15 @@ static inline int tx_work_todo(struct xenvif_queue *queue);
 static inline unsigned long idx_to_pfn(struct xenvif_queue *queue,
 				       u16 idx)
 {
-	return page_to_pfn(queue->mmap_pages[idx]);
+	//return page_to_pfn(queue->mmap_pages[idx]);
+	return queue->mapped_address[idx] >> XEN_PAGE_SHIFT; 
 }
 
 static inline unsigned long idx_to_kaddr(struct xenvif_queue *queue,
 					 u16 idx)
 {
-	return (unsigned long)pfn_to_kaddr(idx_to_pfn(queue, idx));
+	//return (unsigned long)(idx_to_pfn(queue, idx));
+	return  queue->mapped_address[idx]; 
 }
 
 #define callback_param(vif, pending_idx) \
@@ -330,9 +332,12 @@ static inline void xenvif_tx_create_map_op(struct xenvif_queue *queue,
 					   struct gnttab_map_grant_ref *mop)
 {
 	queue->pages_to_map[mop-queue->tx_map_ops] = queue->mmap_pages[pending_idx];
-	gnttab_set_map_op(mop, idx_to_kaddr(queue, pending_idx),
-			  GNTMAP_host_map | GNTMAP_readonly,
-			  txp->gref, queue->vif->domid);
+	//gnttab_set_map_op(mop, idx_to_kaddr(queue, pending_idx),
+			 //GNTMAP_host_map | GNTMAP_readonly,
+			  //txp->gref, queue->vif->domid);
+    gnttab_set_map_op(mop, &queue->mapped_address[pending_idx],
+                     GNTMAP_host_map | GNTMAP_readonly,
+                      txp->gref, queue->vif->domid);
 
 	memcpy(&queue->pending_tx_info[pending_idx].req, txp,
 	       sizeof(*txp));
@@ -590,7 +595,7 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
 		skb->truesize += txp->size;
 
 		/* Take an extra reference to offset network stack's put_page */
-		get_page(queue->mmap_pages[pending_idx]);
+		//get_page(queue->mmap_pages[pending_idx]);
 	}
 }
 
@@ -1265,7 +1270,7 @@ static inline void xenvif_tx_dealloc_action(struct xenvif_queue *queue)
 			queue->pages_to_unmap[gop - queue->tx_unmap_ops] =
 				queue->mmap_pages[pending_idx];
 			gnttab_set_unmap_op(gop,
-					    idx_to_kaddr(queue, pending_idx),
+					    &queue->mapped_address[pending_idx],
 					    GNTMAP_host_map,
 					    queue->grant_tx_handle[pending_idx]);
 			xenvif_grant_handle_reset(queue, pending_idx);
@@ -1391,7 +1396,7 @@ void xenvif_idx_unmap(struct xenvif_queue *queue, u16 pending_idx)
 	struct gnttab_unmap_grant_ref tx_unmap_op;
 
 	gnttab_set_unmap_op(&tx_unmap_op,
-			    idx_to_kaddr(queue, pending_idx),
+			    &queue->mapped_address[pending_idx],
 			    GNTMAP_host_map,
 			    queue->grant_tx_handle[pending_idx]);
 	xenvif_grant_handle_reset(queue, pending_idx);

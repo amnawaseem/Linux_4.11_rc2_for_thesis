@@ -529,12 +529,12 @@ int xenvif_init_queue(struct xenvif_queue *queue)
 	 * better enable it. The long term solution would be to use just a
 	 * bunch of valid page descriptors, without dependency on ballooning
 	 */
-	err = gnttab_alloc_pages(MAX_PENDING_REQS,
+	/*err = gnttab_alloc_pages(MAX_PENDING_REQS,
 				 queue->mmap_pages);
 	if (err) {
 		netdev_err(queue->vif->dev, "Could not reserve mmap_pages\n");
 		return -ENOMEM;
-	}
+	} */
 
 	for (i = 0; i < MAX_PENDING_REQS; i++) {
 		queue->pending_tx_info[i].callback_struct = (struct ubuf_info)
@@ -781,7 +781,7 @@ void xenvif_disconnect_ctrl(struct xenvif *vif)
  */
 void xenvif_deinit_queue(struct xenvif_queue *queue)
 {
-	gnttab_free_pages(MAX_PENDING_REQS, queue->mmap_pages);
+	//gnttab_free_pages(MAX_PENDING_REQS, queue->mmap_pages);
 }
 
 void xenvif_free(struct xenvif *vif)

@@ -144,15 +144,10 @@ void gnttab_grant_foreign_transfer_ref(grant_ref_t, domid_t domid,
 				       unsigned long pfn);
 
 static inline void
-gnttab_set_map_op(struct gnttab_map_grant_ref *map, phys_addr_t addr,
+gnttab_set_map_op(struct gnttab_map_grant_ref *map, phys_addr_t *addr,
 		  uint32_t flags, grant_ref_t ref, domid_t domid)
 {
-	if (flags & GNTMAP_contains_pte)
-		map->host_addr = addr;
-	else if (xen_feature(XENFEAT_auto_translated_physmap))
-		map->host_addr = __pa(addr);
-	else
-		map->host_addr = addr;
+    map->host_addr = addr;
 
 	map->flags = flags;
 	map->ref = ref;
@@ -160,15 +155,11 @@ gnttab_set_map_op(struct gnttab_map_grant_ref *map, phys_addr_t addr,
 }
 
 static inline void
-gnttab_set_unmap_op(struct gnttab_unmap_grant_ref *unmap, phys_addr_t addr,
+gnttab_set_unmap_op(struct gnttab_unmap_grant_ref *unmap, phys_addr_t *addr,
 		    uint32_t flags, grant_handle_t handle)
 {
-	if (flags & GNTMAP_contains_pte)
-		unmap->host_addr = addr;
-	else if (xen_feature(XENFEAT_auto_translated_physmap))
-		unmap->host_addr = __pa(addr);
-	else
-		unmap->host_addr = addr;
+
+	unmap->host_addr = addr;
 
 	unmap->handle = handle;
 	unmap->dev_bus_addr = 0;

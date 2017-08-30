@@ -261,7 +261,7 @@ typedef uint32_t grant_handle_t;
 #define GNTTABOP_map_grant_ref        0
 struct gnttab_map_grant_ref {
     /* IN parameters. */
-    uint64_t host_addr;
+    uint64_t *host_addr;
     uint32_t flags;               /* GNTMAP_* */
     grant_ref_t ref;
     domid_t  dom;
@@ -286,7 +286,7 @@ DEFINE_GUEST_HANDLE_STRUCT(gnttab_map_grant_ref);
 #define GNTTABOP_unmap_grant_ref      1
 struct gnttab_unmap_grant_ref {
     /* IN parameters. */
-    uint64_t host_addr;
+    uint64_t *host_addr;
     uint64_t dev_bus_addr;
     grant_handle_t handle;
     /* OUT parameters. */

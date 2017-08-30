@@ -241,7 +241,7 @@ static int find_grant_ptes(pte_t *pte, pgtable_t token,
 	struct grant_map *map = data;
 	unsigned int pgnr = (addr - map->vma->vm_start) >> PAGE_SHIFT;
 	int flags = map->flags | GNTMAP_application_map | GNTMAP_contains_pte;
-	u64 pte_maddr;
+	phys_addr_t pte_maddr;
 
 	BUG_ON(pgnr >= map->count);
 	pte_maddr = arbitrary_virt_to_machine(pte).maddr;
@@ -254,10 +254,10 @@ static int find_grant_ptes(pte_t *pte, pgtable_t token,
 	if (xen_feature(XENFEAT_gnttab_map_avail_bits))
 		flags |= (1 << _GNTMAP_guest_avail0);
 
-	gnttab_set_map_op(&map->map_ops[pgnr], pte_maddr, flags,
+	gnttab_set_map_op(&map->map_ops[pgnr], &pte_maddr, flags,
 			  map->grants[pgnr].ref,
 			  map->grants[pgnr].domid);
-	gnttab_set_unmap_op(&map->unmap_ops[pgnr], pte_maddr, flags,
+	gnttab_set_unmap_op(&map->unmap_ops[pgnr], &pte_maddr, flags,
 			    -1 /* handle */);
 	return 0;
 }
@@ -282,10 +282,10 @@ static int map_grant_pages(struct grant_map *map)
 		for (i = 0; i < map->count; i++) {
 			unsigned long addr = (unsigned long)
 				pfn_to_kaddr(page_to_pfn(map->pages[i]));
-			gnttab_set_map_op(&map->map_ops[i], addr, map->flags,
+			gnttab_set_map_op(&map->map_ops[i], (phys_addr_t *)&addr, map->flags,
 				map->grants[i].ref,
 				map->grants[i].domid);
-			gnttab_set_unmap_op(&map->unmap_ops[i], addr,
+			gnttab_set_unmap_op(&map->unmap_ops[i], (phys_addr_t *)&addr,
 				map->flags, -1 /* handle */);
 		}
 	} else {
@@ -300,11 +300,11 @@ static int map_grant_pages(struct grant_map *map)
 				pfn_to_kaddr(page_to_pfn(map->pages[i]));
 			BUG_ON(PageHighMem(map->pages[i]));
 
-			gnttab_set_map_op(&map->kmap_ops[i], address,
+			gnttab_set_map_op(&map->kmap_ops[i], (phys_addr_t *)&address,
 				map->flags | GNTMAP_host_map,
 				map->grants[i].ref,
 				map->grants[i].domid);
-			gnttab_set_unmap_op(&map->kunmap_ops[i], address,
+			gnttab_set_unmap_op(&map->kunmap_ops[i],(phys_addr_t *) &address,
 				map->flags | GNTMAP_host_map, -1);
 		}
 	}

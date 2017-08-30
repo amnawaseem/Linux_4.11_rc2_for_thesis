@@ -355,6 +355,7 @@ struct grant_page {
 	struct persistent_gnt	*persistent_gnt;
 	grant_handle_t		handle;
 	grant_ref_t		gref;
+    u64            mapped_addr;
 };
 
 /*

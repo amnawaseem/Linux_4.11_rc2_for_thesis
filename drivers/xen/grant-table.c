@@ -140,6 +140,8 @@ static int grefs_per_grant_frame;
 static struct gnttab_free_callback *gnttab_free_callback_list;
 
 static int gnttab_expand(unsigned int req_entries);
+static void __gnttab_map_grant_ref( struct gnttab_map_grant_ref *op);
+static long gnttab_map_grant_refs(struct gnttab_map_grant_ref *ops, unsigned int count);
 
 #define RPP (PAGE_SIZE / sizeof(grant_ref_t))
 
@@ -755,11 +757,53 @@ gnttab_retry_eagain_gop(unsigned int cmd, void *gop, int16_t *status,
 	}
 }
 
+static void
+__gnttab_map_grant_ref(
+    struct gnttab_map_grant_ref *op)
+{
+    
+    unsigned long gfn;
+    void *vaddr;
+    if ( unlikely((op->flags & (GNTMAP_device_map|GNTMAP_host_map)) == 0) )
+    {
+        printk(KERN_INFO, "Bad flags in grant map op (%x).\n", op->flags);
+        op->status = GNTST_bad_gntref;
+        return;
+    }
+
+    gfn = gnttab_shared_remote.v1[op->ref].frame;
+    vaddr = xen_remap(gfn << XEN_PAGE_SHIFT, XEN_PAGE_SIZE);
+    if (op->flags &  GNTMAP_host_map)
+        *(op->host_addr) = (unsigned long)vaddr;
+    if (op->flags &  GNTMAP_device_map)
+        op->dev_bus_addr = (unsigned long)vaddr;
+
+    op->handle       = op->ref;
+    op->status       = GNTST_okay;
+    return;
+
+ 
+}
+
+static long
+gnttab_map_grant_refs(
+    struct gnttab_map_grant_ref *ops, unsigned int count)
+{
+    int i;
+
+    for ( i = 0; i < count; i++ )
+    {
+        __gnttab_map_grant_ref(&ops[i]);
+    }
+
+    return 0;
+}
+
 void gnttab_batch_map(struct gnttab_map_grant_ref *batch, unsigned count)
 {
 	struct gnttab_map_grant_ref *op;
 
-	if (HYPERVISOR_grant_table_op(GNTTABOP_map_grant_ref, batch, count))
+	if (gnttab_map_grant_refs(batch, count))
 		BUG();
 	for (op = batch; op < batch + count; op++)
 		if (op->status == GNTST_eagain)
@@ -770,14 +814,29 @@ EXPORT_SYMBOL_GPL(gnttab_batch_map);
 
 void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
 {
-	struct gnttab_copy *op;
+	struct gnttab_copy *op = batch;
+    void *dest_virt, *src_virt;
+    unsigned long gfn;
+    if (op->flags & GNTCOPY_source_gref)
+    {
+        gfn = gnttab_shared_remote.v1[op->source.u.ref].frame;
+        src_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
+        dest_virt = op->dest.u.gmfn << XEN_PAGE_SHIFT;
+        memcpy(dest_virt + op->dest.offset, src_virt + op->source.offset,
+           op->len);
+        xen_unmap(src_virt);
+    }
+    else if (op->flags & GNTCOPY_dest_gref)
+    {
+        gfn = gnttab_shared_remote.v1[op->dest.u.ref].frame;
+        dest_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
+        src_virt = op->source.u.gmfn << XEN_PAGE_SHIFT;
+        memcpy(dest_virt + op->dest.offset, src_virt + op->source.offset,
+           op->len);
+        xen_unmap(src_virt);
+    }
+    op->status = GNTST_okay;
 
-	if (HYPERVISOR_grant_table_op(GNTTABOP_copy, batch, count))
-		BUG();
-	for (op = batch; op < batch + count; op++)
-		if (op->status == GNTST_eagain)
-			gnttab_retry_eagain_gop(GNTTABOP_copy, op,
-						&op->status, __func__);
 }
 EXPORT_SYMBOL_GPL(gnttab_batch_copy);
 
@@ -829,268 +888,13 @@ void gnttab_foreach_grant(struct page **pages,
 	}
 }
 
-static void
-__gnttab_map_grant_ref(
-    struct gnttab_map_grant_ref *op)
-{
-    domid_t remote_domid;
-    struct domain *ld, *rd, *owner = NULL;
-    struct grant_table *lgt, *ergt;
-    struct vcpu   *led;
-    int            handle;
-    unsigned long  frame = 0, nr_gets = 0;
-    struct page_info *pg = NULL;
-    int            rc = GNTST_okay;
-    u32            old_pin;
-    u32            act_pin;
-    unsigned int   cache_flags;
-    struct active_grant_entry *act = NULL;
-    struct grant_mapping *mt;
-    grant_entry_header_t *shah;
-    uint16_t *status;
-    bool_t need_iommu;
-
-    led = current;
-    ld = led->domain;
-    gnttab_shared_remote
-    
-    if ( unlikely((op->flags & (GNTMAP_device_map|GNTMAP_host_map)) == 0) )
-    {
-        printk(KERN_INFO, "Bad flags in grant map op (%x).\n", op->flags);
-        op->status = GNTST_bad_gntref;
-        return;
-    }
-
-    unsigned long gfn = gnttab_shared_remote.v1[op->ref].frame;
-
-
-    rc = __get_paged_frame(gfn, &frame, &pg, 
-                            !!(op->flags & GNTMAP_readonly), rd);
-    if ( rc != GNTST_okay )
-        goto unlock_out_clear;
-    act->gfn = gfn;
-    act->domid = ld->domain_id;
-    act->frame = frame;
-    act->start = 0;
-    act->length = PAGE_SIZE;
-    act->is_sub_page = 0;
-    act->trans_domain = rd;
-    act->trans_gref = op->ref;
-   
-
-
-    old_pin = act->pin;
-    if ( op->flags & GNTMAP_device_map )
-        act->pin += (op->flags & GNTMAP_readonly) ?
-            GNTPIN_devr_inc : GNTPIN_devw_inc;
-    if ( op->flags & GNTMAP_host_map )
-        act->pin += (op->flags & GNTMAP_readonly) ?
-            GNTPIN_hstr_inc : GNTPIN_hstw_inc;
-
-    frame = act->frame;
-    act_pin = act->pin;
-
-    cache_flags = (shah->flags & (GTF_PAT | GTF_PWT | GTF_PCD) );
-
-    active_entry_release(act);
-    grant_read_unlock(rgt);
-
-    /* pg may be set, with a refcount included, from __get_paged_frame */
-    if ( !pg )
-    {
-        pg = mfn_valid(frame) ? mfn_to_page(frame) : NULL;
-        if ( pg )
-            owner = page_get_owner_and_reference(pg);
-    }
-    else
-        owner = page_get_owner(pg);
-
-    if ( !pg || (owner == dom_io) )
-    {
-        /* Only needed the reference to confirm dom_io ownership. */
-        if ( pg )
-            put_page(pg);
-
-        if ( paging_mode_external(ld) )
-        {
-            gdprintk(XENLOG_WARNING, "HVM guests can't grant map iomem\n");
-            rc = GNTST_general_error;
-            goto undo_out;
-        }
-
-        if ( !iomem_access_permitted(rd, frame, frame) )
-        {
-            gdprintk(XENLOG_WARNING,
-                     "Iomem mapping not permitted %lx (domain %d)\n", 
-                     frame, rd->domain_id);
-            rc = GNTST_general_error;
-            goto undo_out;
-        }
-
-        rc = create_grant_host_mapping(
-            op->host_addr, frame, op->flags, cache_flags);
-        if ( rc != GNTST_okay )
-            goto undo_out;
-    }
-    else if ( owner == rd || owner == dom_cow )
-    {
-        if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
-        {
-            if ( (owner == dom_cow) ||
-                 !get_page_type(pg, PGT_writable_page) )
-                goto could_not_pin;
-        }
-
-        nr_gets++;
-        if ( op->flags & GNTMAP_host_map )
-        {
-            rc = create_grant_host_mapping(op->host_addr, frame, op->flags, 0);
-            if ( rc != GNTST_okay )
-                goto undo_out;
-
-            if ( op->flags & GNTMAP_device_map )
-            {
-                nr_gets++;
-                (void)get_page(pg, rd);
-                if ( !(op->flags & GNTMAP_readonly) )
-                    get_page_type(pg, PGT_writable_page);
-            }
-        }
-    }
-    else
-    {
-    could_not_pin:
-        if ( !rd->is_dying )
-            gdprintk(XENLOG_WARNING, "Could not pin grant frame %lx\n",
-                     frame);
-        if ( owner != NULL )
-            put_page(pg);
-        rc = GNTST_general_error;
-        goto undo_out;
-    }
-
-    need_iommu = gnttab_need_iommu_mapping(ld);
-    if ( need_iommu )
-    {
-        unsigned int kind;
-        int err = 0;
-
-        double_gt_lock(lgt, rgt);
-
-        /* We're not translated, so we know that gmfns and mfns are
-           the same things, so the IOMMU entry is always 1-to-1. */
-        kind = mapkind(lgt, rd, frame);
-        if ( (act_pin & (GNTPIN_hstw_mask|GNTPIN_devw_mask)) &&
-             !(old_pin & (GNTPIN_hstw_mask|GNTPIN_devw_mask)) )
-        {
-            if ( !(kind & MAPKIND_WRITE) )
-                err = iommu_map_page(ld, frame, frame,
-                                     IOMMUF_readable|IOMMUF_writable);
-        }
-        else if ( act_pin && !old_pin )
-        {
-            if ( !kind )
-                err = iommu_map_page(ld, frame, frame, IOMMUF_readable);
-        }
-        if ( err )
-        {
-            double_gt_unlock(lgt, rgt);
-            rc = GNTST_general_error;
-            goto undo_out;
-        }
-    }
-
-    TRACE_1D(TRC_MEM_PAGE_GRANT_MAP, op->dom);
-
-    /*
-     * All maptrack entry users check mt->flags first before using the
-     * other fields so just ensure the flags field is stored last.
-     *
-     * However, if gnttab_need_iommu_mapping() then this would race
-     * with a concurrent mapcount() call (on an unmap, for example)
-     * and a lock is required.
-     */
-    mt = &maptrack_entry(lgt, handle);
-    mt->domid = op->dom;
-    mt->ref   = op->ref;
-    wmb();
-    write_atomic(&mt->flags, op->flags);
-
-    if ( need_iommu )
-        double_gt_unlock(lgt, rgt);
-
-    op->dev_bus_addr = (u64)frame << PAGE_SHIFT;
-    op->handle       = handle;
-    op->status       = GNTST_okay;
-
-    rcu_unlock_domain(rd);
-    return;
-
- undo_out:
-    if ( nr_gets > 1 )
-    {
-        if ( !(op->flags & GNTMAP_readonly) )
-            put_page_type(pg);
-        put_page(pg);
-    }
-    if ( nr_gets > 0 )
-    {
-        if ( gnttab_host_mapping_get_page_type(op, ld, rd) )
-            put_page_type(pg);
-        put_page(pg);
-    }
-
-    grant_read_lock(rgt);
-
-    act = active_entry_acquire(rgt, op->ref);
-
-    if ( op->flags & GNTMAP_device_map )
-        act->pin -= (op->flags & GNTMAP_readonly) ?
-            GNTPIN_devr_inc : GNTPIN_devw_inc;
-    if ( op->flags & GNTMAP_host_map )
-        act->pin -= (op->flags & GNTMAP_readonly) ?
-            GNTPIN_hstr_inc : GNTPIN_hstw_inc;
- 
- unlock_out_clear:
-    if ( !(op->flags & GNTMAP_readonly) &&
-         !(act->pin & (GNTPIN_hstw_mask|GNTPIN_devw_mask)) )
-        gnttab_clear_flag(_GTF_writing, status);
-
-    if ( !act->pin )
-        gnttab_clear_flag(_GTF_reading, status);
-
- act_release_out:
-    active_entry_release(act);
-
- unlock_out:
-    grant_read_unlock(rgt);
-    op->status = rc;
-    put_maptrack_handle(lgt, handle);
-    rcu_unlock_domain(rd);
-}
-
-static long
-gnttab_map_grant_refs(
-    gnttab_map_grant_ref uop, unsigned int count)
-{
-    int i;
-    struct gnttab_map_grant_ref op;
-
-    for ( i = 0; i < count; i++ )
-    {
-        __gnttab_map_grant_ref(&op);
-    }
-
-    return 0;
-}
-
 int gnttab_map_refs(struct gnttab_map_grant_ref *map_ops,
 		    struct gnttab_map_grant_ref *kmap_ops,
 		    struct page **pages, unsigned int count)
 {
 	int i, ret;
 
-	ret = HYPERVISOR_grant_table_op(GNTTABOP_map_grant_ref, map_ops, count);
+	ret = gnttab_map_grant_refs( map_ops, count);
 	if (ret)
 		return ret;
 
@@ -1110,7 +914,8 @@ int gnttab_map_refs(struct gnttab_map_grant_ref *map_ops,
 		}
 	}
 
-	return set_foreign_p2m_mapping(map_ops, kmap_ops, pages, count);
+	//return set_foreign_p2m_mapping(map_ops, kmap_ops, pages, count);
+	return 0;
 }
 EXPORT_SYMBOL_GPL(gnttab_map_refs);
 

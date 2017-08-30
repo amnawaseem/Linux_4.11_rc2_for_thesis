@@ -259,11 +259,11 @@ static struct sk_buff *xennet_alloc_one_rx_buffer(struct netfront_queue *queue)
 
 	skb = __netdev_alloc_skb(queue->info->netdev,
 				 RX_COPY_THRESHOLD + NET_IP_ALIGN,
-				 GFP_ATOMIC | __GFP_NOWARN);
+				 GFP_XEN);
 	if (unlikely(!skb))
 		return NULL;
 
-	page = alloc_page(GFP_ATOMIC | __GFP_NOWARN);
+	page = alloc_page(GFP_XEN);
 	if (!page) {
 		kfree_skb(skb);
 		return NULL;
@@ -602,8 +602,8 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 			goto drop;
 	}
 
-	page = virt_to_page(skb->data);
-	offset = offset_in_page(skb->data);
+	//page = virt_to_page(skb->data);
+	//offset = offset_in_page(skb->data);
 
 	/* The first req should be at least ETH_HLEN size or the packet will be
 	 * dropped by netback.

@@ -477,7 +477,7 @@ static int __xenbus_map_ring(struct xenbus_device *dev,
 
 	for (i = 0; i < nr_grefs; i++) {
 		memset(&map[i], 0, sizeof(map[i]));
-		gnttab_set_map_op(&map[i], addrs[i], flags, gnt_refs[i],
+		gnttab_set_map_op(&map[i], &addrs[i], flags, gnt_refs[i],
 				  dev->otherend_id);
 		handles[i] = INVALID_GRANT_HANDLE;
 	}
@@ -501,7 +501,7 @@ static int __xenbus_map_ring(struct xenbus_device *dev,
 	for (i = j = 0; i < nr_grefs; i++) {
 		if (handles[i] != INVALID_GRANT_HANDLE) {
 			memset(&unmap[j], 0, sizeof(unmap[j]));
-			gnttab_set_unmap_op(&unmap[j], (phys_addr_t)addrs[i],
+			gnttab_set_unmap_op(&unmap[j], (phys_addr_t *)&addrs[i],
 					    GNTMAP_host_map, handles[i]);
 			j++;
 		}
@@ -608,7 +608,7 @@ static int xenbus_map_ring_valloc_hvm(struct xenbus_device *dev,
 				      void **vaddr)
 {
 	struct xenbus_map_node *node;
-	int err;
+	int err,i;
 	void *addr;
 	bool leaked = false;
 	struct map_ring_valloc_hvm info = {
@@ -625,13 +625,13 @@ static int xenbus_map_ring_valloc_hvm(struct xenbus_device *dev,
 	if (!node)
 		return -ENOMEM;
 
-	err = alloc_xenballooned_pages(nr_pages, node->hvm.pages);
+	/* err = alloc_xenballooned_pages(nr_pages, node->hvm.pages);
 	if (err)
-		goto out_err;
+		goto out_err; */
 
-	gnttab_foreach_grant(node->hvm.pages, nr_grefs,
+	/* gnttab_foreach_grant(node->hvm.pages, nr_grefs,
 			     xenbus_map_ring_setup_grant_hvm,
-			     &info);
+			     &info); */
 
 	err = __xenbus_map_ring(dev, gnt_ref, nr_grefs, node->handles,
 				info.phys_addrs, GNTMAP_host_map, &leaked);
@@ -640,7 +640,11 @@ static int xenbus_map_ring_valloc_hvm(struct xenbus_device *dev,
 	if (err)
 		goto out_free_ballooned_pages;
 
-	addr = vmap(node->hvm.pages, nr_pages, VM_MAP | VM_IOREMAP,
+     for (i=0 ; i< nr_pages; i++)
+     {
+         node->hvm.pages[i] = phys_to_page(info.phys_addrs[i]);
+     }
+	 addr = vmap(node->hvm.pages, nr_pages, VM_MAP | VM_IOREMAP,
 		    PAGE_KERNEL);
 	if (!addr) {
 		err = -ENOMEM;
@@ -667,7 +671,7 @@ static int xenbus_map_ring_valloc_hvm(struct xenbus_device *dev,
 		free_xenballooned_pages(nr_pages, node->hvm.pages);
  out_err:
 	kfree(node);
-	return err;
+	return err; 
 }
 
 
@@ -878,7 +882,7 @@ int xenbus_unmap_ring(struct xenbus_device *dev,
 		return -EINVAL;
 
 	for (i = 0; i < nr_handles; i++)
-		gnttab_set_unmap_op(&unmap[i], vaddrs[i],
+		gnttab_set_unmap_op(&unmap[i], (phys_addr_t *)&vaddrs[i],
 				    GNTMAP_host_map, handles[i]);
 
 	if (HYPERVISOR_grant_table_op(GNTTABOP_unmap_grant_ref, unmap, i))

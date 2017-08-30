@@ -837,15 +837,15 @@ again:
 			pages[i]->page = persistent_gnt->page;
 			pages[i]->persistent_gnt = persistent_gnt;
 		} else {
-			if (get_free_page(ring, &pages[i]->page))
-				goto out_of_memory;
-			addr = vaddr(pages[i]->page);
+			//if (get_free_page(ring, &pages[i]->page))
+				//goto out_of_memory;
+			//addr = vaddr(pages[i]->page);
 			pages_to_gnt[segs_to_map] = pages[i]->page;
 			pages[i]->persistent_gnt = NULL;
 			flags = GNTMAP_host_map;
 			if (!use_persistent_gnts && ro)
 				flags |= GNTMAP_readonly;
-			gnttab_set_map_op(&map[segs_to_map++], addr,
+			gnttab_set_map_op(&map[segs_to_map++], &pages[i]->mapped_addr,
 					  flags, pages[i]->gref,
 					  blkif->domid);
 		}
@@ -858,6 +858,9 @@ again:
 		ret = gnttab_map_refs(map, NULL, pages_to_gnt, segs_to_map);
 		BUG_ON(ret);
 	}
+    for (i = map_until; i < num; i++) {
+        pages[i]->page = phys_to_page(pages[i]->mapped_addr);
+    }
 
 	/*
 	 * Now swizzle the MFN in our domain with the MFN from the other domain

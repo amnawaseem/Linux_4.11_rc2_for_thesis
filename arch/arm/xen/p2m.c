@@ -89,11 +89,12 @@ int set_foreign_p2m_mapping(struct gnttab_map_grant_ref *map_ops,
 			    struct page **pages, unsigned int count)
 {
 	int i;
-
+    unsigned long addr;
 	for (i = 0; i < count; i++) {
 		if (map_ops[i].status)
 			continue;
-		set_phys_to_machine(map_ops[i].host_addr >> XEN_PAGE_SHIFT,
+        addr = *(map_ops[i].host_addr);
+		set_phys_to_machine( addr >> XEN_PAGE_SHIFT ,
 				    map_ops[i].dev_bus_addr >> XEN_PAGE_SHIFT);
 	}
 
@@ -106,9 +107,10 @@ int clear_foreign_p2m_mapping(struct gnttab_unmap_grant_ref *unmap_ops,
 			      struct page **pages, unsigned int count)
 {
 	int i;
-
+    unsigned long addr;
 	for (i = 0; i < count; i++) {
-		set_phys_to_machine(unmap_ops[i].host_addr >> XEN_PAGE_SHIFT,
+        addr = *(unmap_ops[i].host_addr);
+		set_phys_to_machine(addr  >> XEN_PAGE_SHIFT,
 				    INVALID_P2M_ENTRY);
 	}
 

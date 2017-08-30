@@ -149,6 +149,7 @@ struct xenvif_queue { /* Per-queue data for xenvif */
 	struct xen_netif_tx_back_ring tx;
 	struct sk_buff_head tx_queue;
 	struct page *mmap_pages[MAX_PENDING_REQS];
+    phys_addr_t mapped_address[MAX_PENDING_REQS];
 	pending_ring_idx_t pending_prod;
 	pending_ring_idx_t pending_cons;
 	u16 pending_ring[MAX_PENDING_REQS];
