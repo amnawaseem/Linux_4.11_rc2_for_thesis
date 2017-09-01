@@ -822,7 +822,7 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
         gfn = gnttab_shared_remote.v1[op->source.u.ref].frame;
         src_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
         dest_virt = op->dest.u.gmfn << XEN_PAGE_SHIFT;
-        memcpy(dest_virt + op->dest.offset, src_virt + op->source.offset,
+        memcpy_fromio(dest_virt + op->dest.offset, src_virt + op->source.offset,
            op->len);
         xen_unmap(src_virt);
     }
@@ -831,9 +831,9 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
         gfn = gnttab_shared_remote.v1[op->dest.u.ref].frame;
         dest_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
         src_virt = op->source.u.gmfn << XEN_PAGE_SHIFT;
-        memcpy(dest_virt + op->dest.offset, src_virt + op->source.offset,
+        memcpy_toio(dest_virt + op->dest.offset, src_virt + op->source.offset,
            op->len);
-        xen_unmap(src_virt);
+        xen_unmap(dest_virt);
     }
     op->status = GNTST_okay;
 

@@ -363,10 +363,11 @@ int xenbus_grant_ring(struct xenbus_device *dev, void *vaddr,
 {
 	int err;
 	int i, j;
-
+    unsigned long phys_addr;
+    phys_addr = page_to_phys(virt_to_page(vaddr));
 	for (i = 0; i < nr_pages; i++) {
 		err = gnttab_grant_foreign_access(dev->otherend_id,
-						  virt_to_gfn(vaddr), 0);
+						 phys_addr >> XEN_PAGE_SHIFT, 0);
 		if (err < 0) {
 			xenbus_dev_fatal(dev, err,
 					 "granting access to ring page");
