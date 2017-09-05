@@ -595,7 +595,7 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
 		skb->truesize += txp->size;
 
 		/* Take an extra reference to offset network stack's put_page */
-		//get_page(queue->mmap_pages[pending_idx]);
+		get_page(page);
 	}
 }
 

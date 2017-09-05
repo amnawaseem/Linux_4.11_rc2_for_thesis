@@ -822,6 +822,7 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
         gfn = gnttab_shared_remote.v1[op->source.u.ref].frame;
         src_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
         dest_virt = op->dest.u.gmfn << XEN_PAGE_SHIFT;
+        printk("gnttab batch copy from mapped source %u\n", (unsigned long)gfn);
         memcpy_fromio(dest_virt + op->dest.offset, src_virt + op->source.offset,
            op->len);
         xen_unmap(src_virt);
@@ -848,16 +849,17 @@ void gnttab_foreach_grant_in_range(struct page *page,
 {
 	unsigned int goffset;
 	unsigned int glen;
-	unsigned long xen_pfn;
+	unsigned long xen_pfn;  
+    unsigned long page_address;
 
 	len = min_t(unsigned int, PAGE_SIZE - offset, len);
 	goffset = xen_offset_in_page(offset);
-
-	xen_pfn = page_to_xen_pfn(page) + XEN_PFN_DOWN(offset);
+    page_address = page_to_phys(page); 
+	xen_pfn = page_address >>  XEN_PAGE_SHIFT;
 
 	while (len) {
 		glen = min_t(unsigned int, XEN_PAGE_SIZE - goffset, len);
-		fn(pfn_to_gfn(xen_pfn), goffset, glen, data);
+		fn((xen_pfn), goffset, glen, data);
 
 		goffset = 0;
 		xen_pfn++;

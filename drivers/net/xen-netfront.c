@@ -614,8 +614,10 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		nskb = skb_copy(skb, GFP_XEN);
 		if (!nskb)
 			goto drop;
+        printk("New skb %lu and old skb %lu\n", (unsigned long)nskb, (unsigned long)skb);
 		dev_kfree_skb_any(skb);
 		skb = nskb;
+        
 		page = virt_to_page(skb->data);
 		offset = offset_in_page(skb->data);
 	//}

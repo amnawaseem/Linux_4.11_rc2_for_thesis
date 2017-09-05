@@ -364,8 +364,9 @@ int xenbus_grant_ring(struct xenbus_device *dev, void *vaddr,
 	int err;
 	int i, j;
     unsigned long phys_addr;
-    phys_addr = page_to_phys(virt_to_page(vaddr));
+    
 	for (i = 0; i < nr_pages; i++) {
+        phys_addr = page_to_phys(virt_to_page(vaddr));
 		err = gnttab_grant_foreign_access(dev->otherend_id,
 						 phys_addr >> XEN_PAGE_SHIFT, 0);
 		if (err < 0) {
@@ -643,10 +644,13 @@ static int xenbus_map_ring_valloc_hvm(struct xenbus_device *dev,
 
      for (i=0 ; i< nr_pages; i++)
      {
-         node->hvm.pages[i] = phys_to_page(info.phys_addrs[i]);
+         node->hvm.pages[i] = virt_to_page(info.phys_addrs[i]);
      }
-	 addr = vmap(node->hvm.pages, nr_pages, VM_MAP | VM_IOREMAP,
-		    PAGE_KERNEL);
+     if (nr_grefs > 1)
+	     addr = vmap(node->hvm.pages, nr_pages, VM_MAP | VM_IOREMAP,
+		              PAGE_KERNEL_NOCACHE);
+     else
+        addr = info.phys_addrs[0];
 	if (!addr) {
 		err = -ENOMEM;
 		goto out_xenbus_unmap_ring;
@@ -705,11 +709,11 @@ int xenbus_map_ring(struct xenbus_device *dev, grant_ref_t *gnt_refs,
 	if (nr_grefs > XENBUS_MAX_RING_GRANTS)
 		return -EINVAL;
 
-	for (i = 0; i < nr_grefs; i++)
-		phys_addrs[i] = (unsigned long)vaddrs[i];
+	/*for (i = 0; i < nr_grefs; i++)
+		phys_addrs[i] = (unsigned long)vaddrs[i]; */
 
 	return __xenbus_map_ring(dev, gnt_refs, nr_grefs, handles,
-				 phys_addrs, GNTMAP_host_map, leaked);
+				 (phys_addr_t  *)vaddrs, GNTMAP_host_map, leaked);
 }
 EXPORT_SYMBOL_GPL(xenbus_map_ring);
 

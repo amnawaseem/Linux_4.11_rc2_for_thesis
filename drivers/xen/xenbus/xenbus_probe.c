@@ -792,7 +792,7 @@ static int __init xenbus_init(void)
 		if (err)
 			goto out_error;
 		xen_store_interface =
-		     ioremap_nocache(xen_store_gfn << XEN_PAGE_SHIFT,
+		     xen_remap(xen_store_gfn << XEN_PAGE_SHIFT,
 				  XEN_PAGE_SIZE);
         memset_io(xen_store_interface, 0,  XEN_PAGE_SIZE); 
 		break;
@@ -806,7 +806,7 @@ static int __init xenbus_init(void)
 		if (err)
 			goto out_error;
 		xen_store_interface =
-			ioremap_nocache(xen_store_gfn << XEN_PAGE_SHIFT,
+			xen_remap(xen_store_gfn << XEN_PAGE_SHIFT,
 				  XEN_PAGE_SIZE); 
 		break;
 	default:
