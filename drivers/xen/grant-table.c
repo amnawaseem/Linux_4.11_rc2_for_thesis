@@ -855,7 +855,7 @@ void gnttab_foreach_grant_in_range(struct page *page,
 	len = min_t(unsigned int, PAGE_SIZE - offset, len);
 	goffset = xen_offset_in_page(offset);
     page_address = page_to_phys(page); 
-	xen_pfn = page_address >>  XEN_PAGE_SHIFT;
+	xen_pfn = page_address >>  XEN_PAGE_SHIFT +  XEN_PFN_DOWN(offset);
 
 	while (len) {
 		glen = min_t(unsigned int, XEN_PAGE_SIZE - goffset, len);

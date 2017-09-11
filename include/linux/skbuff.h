@@ -925,6 +925,10 @@ bool skb_try_coalesce(struct sk_buff *to, struct sk_buff *from,
 
 struct sk_buff *__alloc_skb(unsigned int size, gfp_t priority, int flags,
 			    int node);
+struct sk_buff * __xen_alloc_skb(unsigned int size, gfp_t gfp_mask);
+struct sk_buff *xen_skb_copy(const struct sk_buff *skb, gfp_t gfp_mask);
+
+
 struct sk_buff *__build_skb(void *data, unsigned int frag_size);
 struct sk_buff *build_skb(void *data, unsigned int frag_size);
 static inline struct sk_buff *alloc_skb(unsigned int size,

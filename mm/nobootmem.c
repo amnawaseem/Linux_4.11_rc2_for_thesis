@@ -165,11 +165,10 @@ static unsigned long __init free_low_memory_core_early(void)
 #ifdef CONFIG_ZONE_XEN
      phys_addr_t xen_zone_start_addr, xen_zone_end_addr;
      unsigned long  xen_zone_size;
-     xen_zone_size = 0x80000;
+     xen_zone_size = 0x400000;
      xen_zone_start_addr = 0xfef00000 + (CONFIG_XEN_DOM_ID * xen_zone_size);
      xen_zone_end_addr = xen_zone_start_addr + xen_zone_size;
 
-    //0xfef00000 is start of dom0 128;  pages i.e. 128 * 4096=0x8000
     __free_pages_memory(PFN_UP(xen_zone_start_addr), PFN_DOWN(xen_zone_end_addr));
     printk(KERN_INFO "Xen ZONE Pages freed %lu\n", PFN_DOWN(xen_zone_end_addr) - PFN_UP(xen_zone_start_addr));
 #endif

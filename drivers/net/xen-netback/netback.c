@@ -348,7 +348,7 @@ static inline struct sk_buff *xenvif_alloc_skb(unsigned int size)
 {
 	struct sk_buff *skb =
 		alloc_skb(size + NET_SKB_PAD + NET_IP_ALIGN,
-			  GFP_ATOMIC | __GFP_NOWARN);
+			 GFP_ATOMIC | __GFP_NOWARN);
 	if (unlikely(skb == NULL))
 		return NULL;
 

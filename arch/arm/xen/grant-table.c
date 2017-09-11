@@ -47,5 +47,6 @@ void arch_gnttab_unmap(void *shared, unsigned long nr_gframes)
 
 int arch_gnttab_init(unsigned long nr_shared)
 {
+    xen_remap(0xfef00000, 0x800000);
 	return 0;
 }

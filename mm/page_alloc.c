@@ -6499,7 +6499,7 @@ void __init free_area_init_nodes(unsigned long *max_zone_pfn)
     unsigned long start_pfn_xen;
     phys_addr_t xen_zone_size, xen_zone_start_addr;
         
-    xen_zone_size = 0x80000;
+    xen_zone_size = 0x400000;
     xen_zone_start_addr = 0xfef00000 + (CONFIG_XEN_DOM_ID * xen_zone_size);
     start_pfn_xen = PFN_DOWN(xen_zone_start_addr) ; 
 #endif

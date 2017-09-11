@@ -280,6 +280,72 @@ nodata:
 	goto out;
 }
 EXPORT_SYMBOL(__alloc_skb);
+struct sk_buff *__xen_alloc_skb(unsigned int size, gfp_t gfp_mask)
+{
+
+	struct skb_shared_info *shinfo;
+	struct sk_buff *skb;
+	u8 *data;
+    void *virt_addr;
+
+	/* Get the HEAD */
+	virt_addr = (void *)get_zeroed_page(GFP_XEN);
+    
+    printk( "skb allocated address page phys is %lu \n",( unsigned long) page_to_phys(virt_to_page(virt_addr))); 
+    skb = (struct sk_buff *)virt_addr;
+    if (!skb)
+		goto out;
+	//prefetchw(skb);
+
+	/* We do our best to align skb_shared_info on a separate cache
+	 * line. It usually works because kmalloc(X > SMP_CACHE_BYTES) gives
+	 * aligned memory blocks, unless SLUB/SLAB debug is enabled.
+	 * Both skb->head and skb_shared_info are cache line aligned.
+	 */
+	size = SKB_DATA_ALIGN(size);
+	size += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+    virt_addr = (void *)__get_free_pages(GFP_XEN, get_order(size));
+    printk( "skb allocated data phys addr is %lu \n", page_to_phys(virt_to_page(virt_addr))); 
+    data = (u8 *)virt_addr;
+    if (!data)
+		goto nodata;
+	/* kmalloc(size) might give us more room than requested.
+	 * Put skb_shared_info exactly at the end of allocated zone,
+	 * to allow max possible filling before reallocation.
+	 */
+	size = SKB_WITH_OVERHEAD(size);
+	//prefetchw(data + size);
+
+	/*
+	 * Only clear those fields we need to clear, not those that we will
+	 * actually initialise below. Hence, don't put any more fields after
+	 * the tail pointer in struct sk_buff!
+	 */
+	memset(skb, 0, offsetof(struct sk_buff, tail));
+	/* Account for allocated memory : skb + skb->head */
+	skb->truesize = SKB_TRUESIZE(size);
+	atomic_set(&skb->users, 1);
+	skb->head = data;
+	skb->data = data;
+	skb_reset_tail_pointer(skb);
+	skb->end = skb->tail + size;
+	skb->mac_header = (typeof(skb->mac_header))~0U;
+	skb->transport_header = (typeof(skb->transport_header))~0U;
+
+	/* make sure we initialize shinfo sequentially */
+	shinfo = skb_shinfo(skb);
+	memset(shinfo, 0, offsetof(struct skb_shared_info, dataref));
+	atomic_set(&shinfo->dataref, 1);
+	kmemcheck_annotate_variable(shinfo->destructor_arg);
+
+out:
+	return skb;
+nodata:
+	free_page(skb);
+	skb = NULL;
+	goto out;
+}
+EXPORT_SYMBOL(__xen_alloc_skb);
 
 /**
  * __build_skb - build a network buffer
@@ -1067,6 +1133,28 @@ static inline int skb_alloc_rx_flag(const struct sk_buff *skb)
 		return SKB_ALLOC_RX;
 	return 0;
 }
+
+struct sk_buff *xen_skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
+{
+	int headerlen = skb_headroom(skb);
+	unsigned int size = skb_end_offset(skb) + skb->data_len;
+    struct sk_buff *n = __xen_alloc_skb(size, gfp_mask);
+	if (!n)
+		return NULL;
+
+	/* Set the data pointer */
+	skb_reserve(n, headerlen);
+	/* Set the tail pointer and length */
+	skb_put(n, skb->len);
+
+	if (skb_copy_bits(skb, -headerlen, n->head, headerlen + skb->len))
+		BUG();
+
+	copy_skb_header(n, skb);
+	return n;
+}
+EXPORT_SYMBOL(xen_skb_copy);
+
 
 /**
  *	skb_copy	-	create private copy of an sk_buff
