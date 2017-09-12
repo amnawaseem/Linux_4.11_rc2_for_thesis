@@ -405,7 +405,8 @@ static void xennet_tx_buf_gc(struct netfront_queue *queue)
 			queue->grant_tx_ref[id] = GRANT_INVALID_REF;
 			queue->grant_tx_page[id] = NULL;
 			add_id_to_freelist(&queue->tx_skb_freelist, queue->tx_skbs, id);
-			dev_kfree_skb_irq(skb);
+            // Amna TODO: releases of skb
+            //dev_kfree_skb_irq(skb);
 		}
 
 		queue->tx.rsp_cons = prod;

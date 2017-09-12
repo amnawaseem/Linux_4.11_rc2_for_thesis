@@ -165,11 +165,16 @@ gnttab_set_unmap_op(struct gnttab_unmap_grant_ref *unmap, phys_addr_t *addr,
 	unmap->dev_bus_addr = 0;
 }
 
+#define SIZE_ARRAY 1024
+
+
 int arch_gnttab_init(unsigned long nr_shared);
 int arch_gnttab_map_shared(xen_pfn_t *frames, unsigned long nr_gframes,
 			   unsigned long max_nr_gframes,
 			   void **__shared);
 void arch_gnttab_unmap(void *shared, unsigned long nr_gframes);
+void *hash_search(unsigned long key);
+
 
 struct grant_frames {
 	xen_pfn_t *pfn;

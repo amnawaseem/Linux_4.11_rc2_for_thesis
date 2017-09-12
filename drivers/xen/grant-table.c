@@ -820,21 +820,33 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
     if (op->flags & GNTCOPY_source_gref)
     {
         gfn = gnttab_shared_remote.v1[op->source.u.ref].frame;
-        src_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
-        dest_virt = op->dest.u.gmfn << XEN_PAGE_SHIFT;
-        printk("gnttab batch copy from mapped source %u\n", (unsigned long)gfn);
-        memcpy_fromio(dest_virt + op->dest.offset, src_virt + op->source.offset,
-           op->len);
-        xen_unmap(src_virt);
+        printk("gnttab batch copy from mapped source %lu\n", (unsigned long)gfn);
+        //src_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
+        
+        src_virt = hash_search(gfn);
+        
+        if (src_virt == NULL){
+            op->status = GNTST_okay;
+            return;
+        }
+        printk("gnttab batch copy virt src addr  %lu\n", (unsigned long)src_virt); 
+        dest_virt = gfn_to_virt(op->dest.u.gmfn);
+        printk("gnttab batch copy dest virt addr  %lu\n", (unsigned long)dest_virt);
+        memcpy_fromio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,op->len);
+        //xen_unmap(src_virt);
     }
     else if (op->flags & GNTCOPY_dest_gref)
     {
         gfn = gnttab_shared_remote.v1[op->dest.u.ref].frame;
-        dest_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
-        src_virt = op->source.u.gmfn << XEN_PAGE_SHIFT;
-        memcpy_toio(dest_virt + op->dest.offset, src_virt + op->source.offset,
+        dest_virt = hash_search(gfn);
+        if (dest_virt == NULL){
+            op->status = GNTST_okay;
+            return;
+        }
+        src_virt = gfn_to_virt(op->source.u.gmfn);
+        memcpy_toio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,
            op->len);
-        xen_unmap(dest_virt);
+        //xen_unmap(dest_virt);
     }
     op->status = GNTST_okay;
 
