@@ -523,7 +523,7 @@ void __init xen_evtchn_2l_init(void)
 	if ( !evtchn_domains )
 		   return;
 	evtchn_domain_local = evtchn_domains + (EVTCHNS_PER_BUCKET * CONFIG_XEN_DOM_ID) ;
-    memset(evtchn_domain_local, 0, EVTCHNS_PER_BUCKET * sizeof(*evtchn_domain_local));
+    memset_io(evtchn_domain_local, 0, EVTCHNS_PER_BUCKET * sizeof(*evtchn_domain_local));
     for ( i = 0; i < EVTCHNS_PER_BUCKET; i++ )
     {
        //Each port has an event channel structure associated with it
