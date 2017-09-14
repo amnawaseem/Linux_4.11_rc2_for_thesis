@@ -47,7 +47,6 @@ static int xsd_kva_mmap(struct file *file, struct vm_area_struct *vma)
                     size, vma->vm_page_prot))
             return -EAGAIN; 
 
-
 	return 0;
 }
 
@@ -83,7 +82,6 @@ static int xsd_foreign_kva_mmap(struct file *file, struct vm_area_struct *vma)
                     0xfee45000 >> XEN_PAGE_SHIFT,
                     size, vma->vm_page_prot))
             return -EAGAIN; 
-
 
 	return 0;
 }

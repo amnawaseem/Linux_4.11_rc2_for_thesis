@@ -272,8 +272,10 @@ static int process_msg(void)
 
 		state.alloc = kmalloc(len, GFP_NOIO | __GFP_HIGH);
 		if (!state.alloc)
+        {     
+            printk("Process_msg kmalloc failed\n");
 			return -ENOMEM;
-
+        }
 		if (state.msg.type == XS_WATCH_EVENT)
 			state.body = state.watch->body;
 		else

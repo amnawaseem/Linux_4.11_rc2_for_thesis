@@ -227,9 +227,18 @@ static void xenvif_rx_next_skb(struct xenvif_queue *queue,
 			       struct xenvif_pkt_state *pkt)
 {
 	struct sk_buff *skb;
+    struct sk_buff *xen_skb;
 	unsigned int gso_type;
 
 	skb = xenvif_rx_dequeue(queue);
+
+    /* xen_skb = xen_skb_copy(skb, GFP_XEN);
+    printk("xen_skb address %p\n", page_to_phys(virt_to_page(xen_skb)));
+    if (!xen_skb)
+        return;
+    dev_kfree_skb_any(skb);
+    skb = xen_skb; */
+    
 
 	queue->stats.tx_bytes += skb->len;
 	queue->stats.tx_packets++;
