@@ -202,3 +202,4 @@ ENTRY(__dma_unmap_area)
 	b.ne	__dma_inv_area
 	ret
 ENDPIPROC(__dma_unmap_area)
+

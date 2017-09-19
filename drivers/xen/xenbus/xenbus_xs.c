@@ -318,7 +318,8 @@ static void *xs_talkv(struct xenbus_transaction t,
 		msg.len += iovec[i].iov_len;
 
 	xs_send(req, &msg);
-
+    
+    printk("waiting for reply \n");
 	ret = xs_wait_for_reply(req, &msg);
 	if (len)
 		*len = msg.len;
