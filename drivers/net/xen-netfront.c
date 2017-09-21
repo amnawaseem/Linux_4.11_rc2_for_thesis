@@ -164,6 +164,9 @@ struct netfront_rx_info {
 	struct xen_netif_rx_response rx;
 	struct xen_netif_extra_info extras[XEN_NETIF_EXTRA_TYPE_MAX - 1];
 };
+void xen_kfree_skb_list(struct sk_buff *segs);
+
+void  xen_kfree_skb(struct sk_buff *skb);
 
 static void skb_entry_set_link(union skb_entry *list, unsigned short id)
 {
@@ -175,6 +178,86 @@ static int skb_entry_is_link(const union skb_entry *list)
 	BUILD_BUG_ON(sizeof(list->skb) != sizeof(list->link));
 	return (unsigned long)list->skb < PAGE_OFFSET;
 }
+
+
+void xen_kfree_skb_list(struct sk_buff *segs)
+{
+	while (segs) {
+		struct sk_buff *next = segs->next;
+
+		xen_kfree_skb(segs);
+		segs = next;
+	}
+}
+EXPORT_SYMBOL(xen_kfree_skb_list);
+
+static void xen_skb_free_head(struct sk_buff *skb)
+{
+	unsigned char *head = skb->head;
+
+	if (skb->head_frag)
+		page_frag_free(head);
+	else
+		free_page(head);
+}
+
+static void xen_skb_release_data(struct sk_buff *skb)
+{
+	struct skb_shared_info *shinfo = skb_shinfo(skb);
+	int i;
+
+	if (skb->cloned &&
+	    atomic_sub_return(skb->nohdr ? (1 << SKB_DATAREF_SHIFT) + 1 : 1,
+			      &shinfo->dataref))
+		return;
+
+	for (i = 0; i < shinfo->nr_frags; i++)
+		__skb_frag_unref(&shinfo->frags[i]);
+
+	/*
+	 * If skb buf is from userspace, we need to notify the caller
+	 * the lower device DMA has done;
+	 */
+	if (shinfo->tx_flags & SKBTX_DEV_ZEROCOPY) {
+		struct ubuf_info *uarg;
+
+		uarg = shinfo->destructor_arg;
+		if (uarg->callback)
+			uarg->callback(uarg, true);
+	}
+
+	if (shinfo->frag_list)
+		xen_kfree_skb_list(shinfo->frag_list);
+
+	xen_skb_free_head(skb);
+}
+
+static void xen_skb_release_head_state(struct sk_buff *skb)
+{
+
+    if (skb->_skb_refdst) {
+        if (!(skb->_skb_refdst & SKB_DST_NOREF))
+		    dst_release((struct dst_entry *)(skb->_skb_refdst & SKB_DST_PTRMASK));
+        skb->_skb_refdst = 0UL;
+    }
+    
+
+}
+
+/* Free everything but the sk_buff shell. */
+static void xen_skb_release_all(struct sk_buff *skb)
+{
+	xen_skb_release_head_state(skb);
+	if (likely(skb->head))
+		xen_skb_release_data(skb);
+}
+
+void xen_kfree_skb(struct sk_buff *skb)
+{
+	xen_skb_release_all(skb);
+
+}
+EXPORT_SYMBOL(xen_kfree_skb);
 
 /*
  * Access macros for acquiring freeing slots in tx_skbs[].
@@ -406,7 +489,7 @@ static void xennet_tx_buf_gc(struct netfront_queue *queue)
 			queue->grant_tx_page[id] = NULL;
 			add_id_to_freelist(&queue->tx_skb_freelist, queue->tx_skbs, id);
             // Amna TODO: releases of skb
-            //dev_kfree_skb_irq(skb);
+            xen_kfree_skb(skb);
 		}
 
 		queue->tx.rsp_cons = prod;
