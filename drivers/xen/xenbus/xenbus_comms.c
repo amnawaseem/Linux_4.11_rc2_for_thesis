@@ -297,6 +297,7 @@ static int process_msg(void)
 	if (state.msg.type == XS_WATCH_EVENT) {
 		state.watch->len = state.msg.len;
 		err = xs_watch_msg(state.watch);
+        printk("received xs watch event\n");
 	} else {
 		err = -ENOENT;
 		mutex_lock(&xb_write_mutex);
@@ -308,6 +309,7 @@ static int process_msg(void)
 					req->body = state.body;
 					req->state = xb_req_state_got_reply;
 					list_del(&req->list);
+                    printk("Calling wake up xs_reply\n");
 					req->cb(req);
 				} else {
 					list_del(&req->list);
@@ -399,7 +401,7 @@ static int process_writes(void)
 		kfree(state.req);
 	else {
 		state.req->state = xb_req_state_got_reply;
-		wake_up(&state.req->wq);
+		wake_up_interruptible(&state.req->wq);
 	}
 
 	mutex_unlock(&xb_write_mutex);

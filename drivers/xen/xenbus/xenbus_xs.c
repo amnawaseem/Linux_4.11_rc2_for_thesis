@@ -201,7 +201,7 @@ static bool test_reply(struct xb_req_data *req)
 static void *read_reply(struct xb_req_data *req)
 {
 	while (req->state != xb_req_state_got_reply) {
-		wait_event(req->wq, test_reply(req));
+		wait_event_interruptible(req->wq, test_reply(req));
 		if (!xenbus_ok())
 			/*
 			 * If we are in the process of being shut-down there is
@@ -262,7 +262,7 @@ static void *xs_wait_for_reply(struct xb_req_data *req, struct xsd_sockmsg *msg)
 
 static void xs_wake_up(struct xb_req_data *req)
 {
-	wake_up(&req->wq);
+	wake_up_interruptible(&req->wq);
     printk("wake up xs reply\n");
 }
 
@@ -318,8 +318,7 @@ static void *xs_talkv(struct xenbus_transaction t,
 		msg.len += iovec[i].iov_len;
 
 	xs_send(req, &msg);
-    
-    printk("waiting for reply \n");
+
 	ret = xs_wait_for_reply(req, &msg);
 	if (len)
 		*len = msg.len;
@@ -901,9 +900,9 @@ static int xs_reboot_notify(struct notifier_block *nb,
 
 	mutex_lock(&xb_write_mutex);
 	list_for_each_entry(req, &xs_reply_list, list)
-		wake_up(&req->wq);
+		wake_up_interruptible(&req->wq);
 	list_for_each_entry(req, &xb_write_list, list)
-		wake_up(&req->wq);
+		wake_up_interruptible(&req->wq);
 	mutex_unlock(&xb_write_mutex);
 	return NOTIFY_DONE;
 }

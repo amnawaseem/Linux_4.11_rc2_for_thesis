@@ -543,12 +543,12 @@ int evtchn_send(unsigned int lport)
         }
         
     case ECS_IPI:
-        s = (struct shared_info *)(Shared_info_pages + (XEN_PAGE_SIZE * CONFIG_XEN_DOM_ID));
+        /* s = (struct shared_info *)(Shared_info_pages + (XEN_PAGE_SIZE * CONFIG_XEN_DOM_ID));
         sync_set_bit(lchn->port, BM(&s->evtchn_pending[0]));
         if ( !sync_test_bit(lchn->port, BM(&s->evtchn_mask[0])) &&
              !sync_test_and_set_bit(lchn->port / BITS_PER_EVTCHN_WORD,
 					   BM(&s->vcpu_info[0].evtchn_pending_sel)) )
-            vcpu_mark_events_pending(s,lchn->notify_vcpu_id);
+            vcpu_mark_events_pending(s,lchn->notify_vcpu_id); */
         break;
     case ECS_UNBOUND:
         /* silently drop the notification */

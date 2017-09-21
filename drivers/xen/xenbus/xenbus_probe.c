@@ -808,6 +808,7 @@ static int __init xenbus_init(void)
 		xen_store_interface =
 			xen_remap(xen_store_gfn << XEN_PAGE_SHIFT,
 				  XEN_PAGE_SIZE); 
+        memset_io(xen_store_interface, 0,  XEN_PAGE_SIZE); 
 		break;
 	default:
 		pr_warn("Xenstore state unknown\n");
