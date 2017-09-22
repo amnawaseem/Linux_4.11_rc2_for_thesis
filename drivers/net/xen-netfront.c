@@ -197,6 +197,7 @@ static void xen_skb_free_head(struct sk_buff *skb)
 
 	if (skb->head_frag)
 		page_frag_free(head);
+    
 	else
 		free_page(head);
 }
@@ -255,6 +256,7 @@ static void xen_skb_release_all(struct sk_buff *skb)
 void xen_kfree_skb(struct sk_buff *skb)
 {
 	xen_skb_release_all(skb);
+    free_page(skb);
 
 }
 EXPORT_SYMBOL(xen_kfree_skb);
@@ -489,7 +491,7 @@ static void xennet_tx_buf_gc(struct netfront_queue *queue)
 			queue->grant_tx_page[id] = NULL;
 			add_id_to_freelist(&queue->tx_skb_freelist, queue->tx_skbs, id);
             // Amna TODO: releases of skb
-            xen_kfree_skb(skb);
+            //xen_kfree_skb(skb);
 		}
 
 		queue->tx.rsp_cons = prod;
@@ -668,7 +670,6 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
        goto drop;
 
     xen_skb = xen_skb_copy(skb, GFP_XEN);
-    printk("xen_skb address %p\n", page_to_phys(virt_to_page(xen_skb)));
     if (!xen_skb)
         goto drop;
     dev_kfree_skb_any(skb);
@@ -698,7 +699,6 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
     page = virt_to_page(skb->data);
     offset = offset_in_page(skb->data);
-    printk("xen_skb phys addr address %lu\n", page_to_phys(page));
     /* The first req should be at least ETH_HLEN size or the packet will be
     * dropped by netback.
     */

@@ -148,7 +148,7 @@ static int xb_write(const void *data, unsigned int len)
 		/* Other side must not see new producer until data is there. */
 		virt_wmb();
 		intf->req_prod += avail;
-        printk("xb written data\n");
+
 		/* Implies mb(): other side will see the updated producer. */
 		if (prod <= intf->req_cons)
 			notify_remote_via_evtchn(xen_store_evtchn);
@@ -273,7 +273,6 @@ static int process_msg(void)
 		state.alloc = kmalloc(len, GFP_NOIO | __GFP_HIGH);
 		if (!state.alloc)
         {     
-            printk("Process_msg kmalloc failed\n");
 			return -ENOMEM;
         }
 		if (state.msg.type == XS_WATCH_EVENT)
@@ -297,7 +296,7 @@ static int process_msg(void)
 	if (state.msg.type == XS_WATCH_EVENT) {
 		state.watch->len = state.msg.len;
 		err = xs_watch_msg(state.watch);
-        printk("received xs watch event\n");
+
 	} else {
 		err = -ENOENT;
 		mutex_lock(&xb_write_mutex);
@@ -309,7 +308,6 @@ static int process_msg(void)
 					req->body = state.body;
 					req->state = xb_req_state_got_reply;
 					list_del(&req->list);
-                    printk("Calling wake up xs_reply\n");
 					req->cb(req);
 				} else {
 					list_del(&req->list);
@@ -423,14 +421,14 @@ static int xenbus_thread(void *unused)
 	while (!kthread_should_stop()) {
 		if (wait_event_interruptible(xb_waitq, xb_thread_work()))
 			continue;
-        printk("Got message from xenstore\n");
+
 		err = process_msg();
 		if (err == -ENOMEM)
 			schedule();
 		else if (err)
 			pr_warn_ratelimited("error %d while reading message\n",
 					    err);
-        printk("process writes\n");
+
 		err = process_writes();
 		if (err)
 			pr_warn_ratelimited("error %d while writing message\n",

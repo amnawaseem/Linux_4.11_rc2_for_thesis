@@ -291,7 +291,6 @@ struct sk_buff *__xen_alloc_skb(unsigned int size, gfp_t gfp_mask)
 	/* Get the HEAD */
 	virt_addr = (void *)get_zeroed_page(GFP_XEN);
     
-    printk( "skb allocated address page phys is %lu \n",( unsigned long) page_to_phys(virt_to_page(virt_addr))); 
     skb = (struct sk_buff *)virt_addr;
     if (!skb)
 		goto out;
@@ -305,7 +304,7 @@ struct sk_buff *__xen_alloc_skb(unsigned int size, gfp_t gfp_mask)
 	size = SKB_DATA_ALIGN(size);
 	size += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
     virt_addr = (void *)__get_free_pages(GFP_XEN, get_order(size));
-    printk( "skb allocated data phys addr is %lu \n", page_to_phys(virt_to_page(virt_addr))); 
+ 
     data = (u8 *)virt_addr;
     if (!data)
 		goto nodata;

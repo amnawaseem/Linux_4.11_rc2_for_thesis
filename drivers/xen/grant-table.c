@@ -772,7 +772,7 @@ __gnttab_map_grant_ref(
     }
 
     gfn = gnttab_shared_remote.v1[op->ref].frame;
-    vaddr = xen_remap(gfn << XEN_PAGE_SHIFT, XEN_PAGE_SIZE);
+    vaddr = hash_search(gfn);
     if (op->flags &  GNTMAP_host_map)
         *(op->host_addr) = (unsigned long)vaddr;
     if (op->flags &  GNTMAP_device_map)
@@ -820,8 +820,6 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
     if (op->flags & GNTCOPY_source_gref)
     {
         gfn = gnttab_shared_remote.v1[op->source.u.ref].frame;
-        printk("gnttab batch copy from mapped source %lu\n", (unsigned long)gfn);
-        //src_virt = xen_remap(gfn << XEN_PAGE_SHIFT, op->len);
         
         src_virt = hash_search(gfn);
         
@@ -829,11 +827,11 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
             op->status = GNTST_okay;
             return;
         }
-        printk("gnttab batch copy virt src addr  %lu\n", (unsigned long)src_virt); 
+
         dest_virt = gfn_to_virt(op->dest.u.gmfn);
-        printk("gnttab batch copy dest virt addr  %lu\n", (unsigned long)dest_virt);
+       
         memcpy_fromio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,op->len);
-        //xen_unmap(src_virt);
+
     }
     else if (op->flags & GNTCOPY_dest_gref)
     {
@@ -846,7 +844,7 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
         src_virt = gfn_to_virt(op->source.u.gmfn);
         memcpy_toio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,
            op->len);
-        //xen_unmap(dest_virt);
+
     }
     op->status = GNTST_okay;
 
@@ -920,11 +918,12 @@ int gnttab_map_refs(struct gnttab_map_grant_ref *map_ops,
 
 		if (map_ops[i].status == GNTST_okay) {
 			struct xen_page_foreign *foreign;
-
-			SetPageForeign(pages[i]);
-			foreign = xen_page_foreign(pages[i]);
+            struct page *xen_mapped_page;
+            xen_mapped_page = virt_to_page(*(map_ops[i].host_addr));
+			/* SetPageForeign(xen_mapped_page);
+			foreign = xen_page_foreign(xen_mapped_page);
 			foreign->domid = map_ops[i].dom;
-			foreign->gref = map_ops[i].ref;
+			foreign->gref = map_ops[i].ref; */
 		}
 	}
 
