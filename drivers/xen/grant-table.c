@@ -920,10 +920,10 @@ int gnttab_map_refs(struct gnttab_map_grant_ref *map_ops,
 			struct xen_page_foreign *foreign;
             struct page *xen_mapped_page;
             xen_mapped_page = virt_to_page(*(map_ops[i].host_addr));
-			/* SetPageForeign(xen_mapped_page);
+		    SetPageForeign(xen_mapped_page);
 			foreign = xen_page_foreign(xen_mapped_page);
 			foreign->domid = map_ops[i].dom;
-			foreign->gref = map_ops[i].ref; */
+			foreign->gref = map_ops[i].ref;
 		}
 	}
 
@@ -939,14 +939,27 @@ int gnttab_unmap_refs(struct gnttab_unmap_grant_ref *unmap_ops,
 	unsigned int i;
 	int ret;
 
-	ret = HYPERVISOR_grant_table_op(GNTTABOP_unmap_grant_ref, unmap_ops, count);
+	/* ret = HYPERVISOR_grant_table_op(GNTTABOP_unmap_grant_ref, unmap_ops, count);
 	if (ret)
-		return ret;
+		return ret; */
 
 	for (i = 0; i < count; i++)
-		ClearPageForeign(pages[i]);
+    {
+        struct xen_page_foreign *foreign;
+        struct page *xen_mapped_page;
+        xen_mapped_page = virt_to_page(*(unmap_ops[i].host_addr));
+		ClearPageForeign(xen_mapped_page);
+        *(unmap_ops[i].host_addr) = NULL;
+        unmap_ops[i].dev_bus_addr = NULL;
+        
+        unmap_ops[i].handle       = NULL;
+        unmap_ops[i].status       = GNTST_okay;
 
-	return clear_foreign_p2m_mapping(unmap_ops, kunmap_ops, pages, count);
+        
+    }
+
+	//return clear_foreign_p2m_mapping(unmap_ops, kunmap_ops, pages, count);
+	return 0;
 }
 EXPORT_SYMBOL_GPL(gnttab_unmap_refs);
 

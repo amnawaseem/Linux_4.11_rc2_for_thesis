@@ -672,6 +672,8 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     xen_skb = xen_skb_copy(skb, GFP_XEN);
     if (!xen_skb)
         goto drop;
+    skb_shinfo(xen_skb)->nr_frags = skb_shinfo(skb)->nr_frags ;
+    printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
     dev_kfree_skb_any(skb);
     skb = xen_skb;
     
@@ -766,6 +768,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     /* Requests for all the frags. */
     for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
        skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
+       printk("number of frags xmit %d, skb_frag_page(frag) %lx\n",skb_shinfo(skb)->nr_frags,page_to_phys(skb_frag_page(frag)));
        tx = xennet_make_txreqs(queue, tx, skb,
                    skb_frag_page(frag), frag->page_offset,
                    skb_frag_size(frag));

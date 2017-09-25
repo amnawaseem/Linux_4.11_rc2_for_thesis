@@ -111,14 +111,15 @@ static inline unsigned long idx_to_pfn(struct xenvif_queue *queue,
 				       u16 idx)
 {
 	//return page_to_pfn(queue->mmap_pages[idx]);
-	return queue->mapped_address[idx] >> XEN_PAGE_SHIFT; 
+	return virt_to_pfn(queue->mapped_address[idx]); 
 }
 
 static inline unsigned long idx_to_kaddr(struct xenvif_queue *queue,
 					 u16 idx)
 {
 	//return (unsigned long)(idx_to_pfn(queue, idx));
-	return  queue->mapped_address[idx]; 
+	printk("mapped address is %lx\n",(unsigned long)queue->mapped_address[idx]);
+	return  (unsigned long)queue->mapped_address[idx]; 
 }
 
 #define callback_param(vif, pending_idx) \
@@ -573,9 +574,10 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
 		struct xen_netif_tx_request *txp;
 		struct page *page;
 		u16 pending_idx;
-
+        void *page_addr;
+        
 		pending_idx = frag_get_pending_idx(frag);
-
+        
 		/* If this is not the first frag, chain it to the previous*/
 		if (prev_pending_idx == INVALID_PENDING_IDX)
 			skb_shinfo(skb)->destructor_arg =
@@ -588,7 +590,15 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
 		prev_pending_idx = pending_idx;
 
 		txp = &queue->pending_tx_info[pending_idx].req;
-		page = virt_to_page(idx_to_kaddr(queue, pending_idx));
+        page = alloc_page(GFP_KERNEL);
+        if (page != NULL && idx_to_kaddr(queue, pending_idx) != NULL)
+        {
+            memcpy_fromio(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
+        }
+        else
+            return;
+        
+        
 		__skb_fill_page_desc(skb, i, page, txp->offset, txp->size);
 		skb->len += txp->size;
 		skb->data_len += txp->size;
