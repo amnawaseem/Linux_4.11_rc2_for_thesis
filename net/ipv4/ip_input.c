@@ -416,12 +416,12 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 	const struct iphdr *iph;
 	struct net *net;
 	u32 len;
-
+    printk("Entering ip rcv \n");
 	/* When the interface is in promisc. mode, drop all the crap
 	 * that it receives, do not try to analyse it.
 	 */
-	//if (skb->pkt_type == PACKET_OTHERHOST)
-		//goto drop;
+	if (skb->pkt_type == PACKET_OTHERHOST)
+		goto drop;
 
 
 	net = dev_net(dev);

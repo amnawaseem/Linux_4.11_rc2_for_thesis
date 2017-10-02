@@ -1147,7 +1147,7 @@ struct sk_buff *xen_skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 	/* Set the tail pointer and length */
 	skb_put(n, skb->len);
 
-	if (xen_skb_copy_bits(n, skb, -headerlen, n->head, headerlen + skb->len))
+	if (skb_copy_bits(skb, -headerlen, n->head, headerlen + skb->len))
 		BUG();
 
 	copy_skb_header(n, skb);

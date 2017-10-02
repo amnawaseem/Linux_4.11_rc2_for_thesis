@@ -831,7 +831,7 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
 
         dest_virt = gfn_to_virt(op->dest.u.gmfn);
        
-        memcpy_fromio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,op->len);
+        memcpy((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,op->len);
 
     }
     else if (op->flags & GNTCOPY_dest_gref)
@@ -843,7 +843,7 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
             return;
         }
         src_virt = gfn_to_virt(op->source.u.gmfn);
-        memcpy_toio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,
+        memcpy((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,
            op->len);
 
     }

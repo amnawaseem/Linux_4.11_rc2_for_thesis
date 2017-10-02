@@ -669,11 +669,12 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     /* Drop the packet if no queues are set up */
     if (num_queues < 1)
        goto drop;
+    printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
 
     xen_skb = xen_skb_copy(skb, GFP_XEN);
     if (!xen_skb)
         goto drop;
-    printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
+    
     dev_kfree_skb_any(skb);
     skb = xen_skb;
     

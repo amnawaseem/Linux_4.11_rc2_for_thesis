@@ -593,7 +593,7 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
         page = alloc_page(GFP_KERNEL);
         if (page != NULL && idx_to_kaddr(queue, pending_idx) != NULL)
         {
-            memcpy_fromio(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
+            memcpy(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
         }
         else
             return;
