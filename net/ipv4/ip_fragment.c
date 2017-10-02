@@ -345,6 +345,7 @@ static int ip_frag_queue(struct ipq *qp, struct sk_buff *skb)
 	if (!(IPCB(skb)->flags & IPSKB_FRAG_COMPLETE) &&
 	    unlikely(ip_frag_too_far(qp)) &&
 	    unlikely(err = ip_frag_reinit(qp))) {
+	    printk("ip_frag_too_far or ip_frag_reinit error \n");
 		ipq_kill(qp);
 		goto err;
 	}
@@ -384,15 +385,23 @@ static int ip_frag_queue(struct ipq *qp, struct sk_buff *skb)
 		}
 	}
 	if (end == offset)
+    {   
+        printk("end == offset of frag\n");
 		goto err;
+    }
 
 	err = -ENOMEM;
-	if (!pskb_pull(skb, skb_network_offset(skb) + ihl))
+	if (!pskb_pull(skb, skb_network_offset(skb) + ihl)){
+        printk("pskb pull frag error \n");
 		goto err;
-
+       }
 	err = pskb_trim_rcsum(skb, end - offset);
 	if (err)
-		goto err;
+        {
+                printk("pskb_trim_rcsum frag error \n");
+                goto err;
+               }
+
 
 	/* Find out which fragments are in front and at the back of us
 	 * in the chain of fragments so far.  We must know where to put
@@ -415,6 +424,7 @@ found:
 	 * preceding fragment, and, if needed, align things so that
 	 * any overlaps are eliminated.
 	 */
+	 printk("Bingo we found we to put this fragment\n");
 	if (prev) {
 		int i = (FRAG_CB(prev)->offset + prev->len) - offset;
 
@@ -509,9 +519,11 @@ found:
 	}
 
 	skb_dst_drop(skb);
+    printk("ip frag error EINPROGRESS\n");
 	return -EINPROGRESS;
 
 err:
+    printk("ip frag error %d",err);
 	kfree_skb(skb);
 	return err;
 }
@@ -531,7 +543,7 @@ static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
 	u8 ecn;
 
 	ipq_kill(qp);
-
+    printk("IP fragment reassembly\n");
 	ecn = ip_frag_ecn_table[qp->ecn];
 	if (unlikely(ecn == 0xff)) {
 		err = -EINVAL;
@@ -641,12 +653,13 @@ static int ip_frag_reasm(struct ipq *qp, struct sk_buff *prev,
 	return 0;
 
 out_nomem:
-	net_dbg_ratelimited("queue_glue: no memory for gluing queue %p\n", qp);
+	printk("queue_glue: no memory for gluing queue %p\n", qp);
 	err = -ENOMEM;
 	goto out_fail;
 out_oversize:
-	net_info_ratelimited("Oversized IP packet from %pI4\n", &qp->saddr);
+	printk("Oversized IP packet from %pI4\n", &qp->saddr);
 out_fail:
+    printk("out_fail:IPSTATS_MIB_REASMFAILS \n");
 	__IP_INC_STATS(net, IPSTATS_MIB_REASMFAILS);
 	return err;
 }
@@ -673,7 +686,8 @@ int ip_defrag(struct net *net, struct sk_buff *skb, u32 user)
 		spin_unlock(&qp->q.lock);
 		ipq_put(qp);
 		return ret;
-	}
+	} 
+    printk("queue header not found no memory skb length %d\n", skb->len);
 
 	__IP_INC_STATS(net, IPSTATS_MIB_REASMFAILS);
 	kfree_skb(skb);

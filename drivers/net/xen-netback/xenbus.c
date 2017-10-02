@@ -1174,7 +1174,7 @@ static int read_xenbus_vif_flags(struct backend_info *be)
 	}
 
 	vif->can_sg = !!xenbus_read_unsigned(dev->otherend, "feature-sg", 0);
-
+    printk("vif can sg %d\n",vif->can_sg);
 	vif->gso_mask = 0;
 
 	if (xenbus_read_unsigned(dev->otherend, "feature-gso-tcpv4", 0))

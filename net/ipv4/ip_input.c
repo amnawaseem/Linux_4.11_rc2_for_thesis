@@ -201,11 +201,11 @@ static int ip_local_deliver_finish(struct net *net, struct sock *sk, struct sk_b
 
 	resubmit:
 		raw = raw_local_deliver(skb, protocol);
-
+        printk("ip_local_deliver_finish return from raw_local_deliver %d\n", raw);
 		ipprot = rcu_dereference(inet_protos[protocol]);
 		if (ipprot) {
 			int ret;
-
+            printk("ip_local_deliver_finish ipprot %d\n",ipprot->no_policy);
 			if (!ipprot->no_policy) {
 				if (!xfrm4_policy_check(NULL, XFRM_POLICY_IN, skb)) {
 					kfree_skb(skb);
@@ -213,8 +213,10 @@ static int ip_local_deliver_finish(struct net *net, struct sock *sk, struct sk_b
 				}
 				nf_reset(skb);
 			}
+            printk("calling iprot handler skb len %d\n", skb->len);
 			ret = ipprot->handler(skb);
 			if (ret < 0) {
+                printk("returned iprot handler ret %d skb len %d\n", ret, skb->len);
 				protocol = -ret;
 				goto resubmit;
 			}
@@ -248,9 +250,12 @@ int ip_local_deliver(struct sk_buff *skb)
 	 *	Reassemble IP fragments.
 	 */
 	struct net *net = dev_net(skb->dev);
-
+    int ret;
 	if (ip_is_fragment(ip_hdr(skb))) {
-		if (ip_defrag(net, skb, IP_DEFRAG_LOCAL_DELIVER))
+        printk("ip_local_deliver ip is fragmented skb len %d\n", skb->len);
+        ret = ip_defrag(net, skb, IP_DEFRAG_LOCAL_DELIVER);
+        printk("ip_local_deliver ret ip_defrag %d\n",ret );
+		if (ret)
 			return 0;
 	}
 
@@ -274,6 +279,7 @@ static inline bool ip_rcv_options(struct sk_buff *skb)
 	*/
 	if (skb_cow(skb, skb_headroom(skb))) {
 		__IP_INC_STATS(dev_net(dev), IPSTATS_MIB_INDISCARDS);
+        printk("Lacks sufficient headroom\n");
 		goto drop;
 	}
 
@@ -292,7 +298,7 @@ static inline bool ip_rcv_options(struct sk_buff *skb)
 		if (in_dev) {
 			if (!IN_DEV_SOURCE_ROUTE(in_dev)) {
 				if (IN_DEV_LOG_MARTIANS(in_dev))
-					net_info_ratelimited("source route option %pI4 -> %pI4\n",
+					printk("source route option %pI4 -> %pI4\n",
 							     &iph->saddr,
 							     &iph->daddr);
 				goto drop;
@@ -346,6 +352,7 @@ static int ip_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 		if (unlikely(err)) {
 			if (err == -EXDEV)
 				__NET_INC_STATS(net, LINUX_MIB_IPRPFILTER);
+            printk("packet dropped invalid dest\n");
 			goto drop;
 		}
 	}
@@ -392,10 +399,11 @@ static int ip_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 		    IN_DEV_ORCONF(in_dev, DROP_UNICAST_IN_L2_MULTICAST))
 			goto drop;
 	}
-
+    printk("calling dst input\n" );
 	return dst_input(skb);
 
 drop:
+     printk("packet dropped in ip_rcv_finish\n" );
 	kfree_skb(skb);
 	return NET_RX_DROP;
 }
@@ -412,8 +420,8 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 	/* When the interface is in promisc. mode, drop all the crap
 	 * that it receives, do not try to analyse it.
 	 */
-	if (skb->pkt_type == PACKET_OTHERHOST)
-		goto drop;
+	//if (skb->pkt_type == PACKET_OTHERHOST)
+		//goto drop;
 
 
 	net = dev_net(dev);
@@ -422,6 +430,7 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 	skb = skb_share_check(skb, GFP_ATOMIC);
 	if (!skb) {
 		__IP_INC_STATS(net, IPSTATS_MIB_INDISCARDS);
+        printk("skb shared check failed\n");
 		goto out;
 	}
 
@@ -472,6 +481,7 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 	 */
 	if (pskb_trim_rcsum(skb, len)) {
 		__IP_INC_STATS(net, IPSTATS_MIB_INDISCARDS);
+        printk("trimming failed\n");
 		goto drop;
 	}
 
@@ -490,9 +500,12 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 
 csum_error:
 	__IP_INC_STATS(net, IPSTATS_MIB_CSUMERRORS);
+    printk("packet checksum error\n");
 inhdr_error:
 	__IP_INC_STATS(net, IPSTATS_MIB_INHDRERRORS);
+    printk("packet indhr error\n");
 drop:
+    printk("packet dropped ip_rcv\n");
 	kfree_skb(skb);
 out:
 	return NET_RX_DROP;

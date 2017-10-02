@@ -119,11 +119,11 @@ int arch_gnttab_init(unsigned long nr_shared)
     for (i = 0; i< SIZE_ARRAY; i++)
     {
         key = phys_addr >> XEN_PAGE_SHIFT; 
-        printk("key inserted is %lu for phys_addr \n",key, phys_addr);
+        //printk("key inserted is %lu for phys_addr \n",key, phys_addr);
         hash_insert(key, virt_addr);
         virt_addr = (unsigned long)(virt_addr) + 4096;
         phys_addr = phys_addr + 4096;
     }
-    display();
+    //display();
 	return 0;
 }

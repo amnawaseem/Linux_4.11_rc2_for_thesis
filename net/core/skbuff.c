@@ -285,6 +285,7 @@ struct sk_buff *__xen_alloc_skb(unsigned int size, gfp_t gfp_mask)
 
 	struct skb_shared_info *shinfo;
 	struct sk_buff *skb;
+    struct page *pages;
 	u8 *data;
     void *virt_addr;
 
@@ -303,8 +304,8 @@ struct sk_buff *__xen_alloc_skb(unsigned int size, gfp_t gfp_mask)
 	 */
 	size = SKB_DATA_ALIGN(size);
 	size += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
-    virt_addr = (void *)__get_free_pages(GFP_XEN, get_order(size));
- 
+    pages = alloc_pages(GFP_XEN, get_order(size));
+    virt_addr = page_to_virt(pages);
     data = (u8 *)virt_addr;
     if (!data)
 		goto nodata;
@@ -1146,7 +1147,7 @@ struct sk_buff *xen_skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 	/* Set the tail pointer and length */
 	skb_put(n, skb->len);
 
-	if (skb_copy_bits(skb, -headerlen, n->head, headerlen + skb->len))
+	if (xen_skb_copy_bits(n, skb, -headerlen, n->head, headerlen + skb->len))
 		BUG();
 
 	copy_skb_header(n, skb);
@@ -1862,7 +1863,6 @@ int skb_copy_bits(const struct sk_buff *skb, int offset, void *to, int len)
 			       vaddr + f->page_offset + offset - start,
 			       copy);
 			kunmap_atomic(vaddr);
-
 			if ((len -= copy) == 0)
 				return 0;
 			offset += copy;
@@ -1897,6 +1897,87 @@ fault:
 	return -EFAULT;
 }
 EXPORT_SYMBOL(skb_copy_bits);
+
+int xen_skb_copy_bits(struct sk_buff *nskb, struct sk_buff *skb, int offset, void *to, int len)
+{
+	int start = skb_headlen(skb);
+	struct sk_buff *frag_iter;
+	int i, copy;
+    struct page *page;
+
+	if (offset > (int)skb->len - len)
+		goto fault;
+
+	/* Copy header. */
+	if ((copy = start - offset) > 0) {
+		if (copy > len)
+			copy = len;
+		skb_copy_from_linear_data_offset(skb, offset, to, copy);
+		if ((len -= copy) == 0)
+			return 0;
+		offset += copy;
+		to     += copy;
+	}
+
+	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+		int end;
+		skb_frag_t *f = &skb_shinfo(skb)->frags[i];
+        void *page_addr;
+        page_addr = get_zeroed_page(GFP_XEN);
+        if (!page_addr) {
+            goto fault;
+        }
+		WARN_ON(start > offset + len);
+
+		end = start + skb_frag_size(f);
+		if ((copy = end - offset) > 0) {
+			u8 *vaddr;
+
+			if (copy > len)
+				copy = len;
+
+			vaddr = kmap_atomic(skb_frag_page(f));
+			memcpy(page_addr,
+			       vaddr + f->page_offset + offset - start,
+			       copy);
+			kunmap_atomic(vaddr);
+            __skb_fill_page_desc(nskb, i, virt_to_page(page_addr), f->page_offset,
+                         skb_shinfo(skb)->frags[i].size);
+			if ((len -= copy) == 0)
+				return 0;
+			offset += copy;
+			to     += copy;
+		}
+		start = end;
+	}
+
+
+	skb_walk_frags(skb, frag_iter) {
+		int end;
+
+		WARN_ON(start > offset + len);
+
+		end = start + frag_iter->len;
+		if ((copy = end - offset) > 0) {
+			if (copy > len)
+				copy = len;
+			if (xen_skb_copy_bits(nskb, frag_iter, offset - start, to, copy))
+				goto fault;
+			if ((len -= copy) == 0)
+				return 0;
+			offset += copy;
+			to     += copy;
+		}
+		start = end;
+	}
+
+	if (!len)
+		return 0;
+
+fault:
+	return -EFAULT;
+}
+EXPORT_SYMBOL(xen_skb_copy_bits);
 
 /*
  * Callback from splice_to_pipe(), if we need to release some pages

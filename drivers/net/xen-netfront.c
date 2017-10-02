@@ -194,7 +194,7 @@ EXPORT_SYMBOL(xen_kfree_skb_list);
 static void xen_skb_free_head(struct sk_buff *skb)
 {
 	unsigned char *head = skb->head;
-
+    put_page((struct page *)head);
 	if (skb->head_frag)
 		page_frag_free(head);
     
@@ -256,6 +256,7 @@ static void xen_skb_release_all(struct sk_buff *skb)
 void xen_kfree_skb(struct sk_buff *skb)
 {
 	xen_skb_release_all(skb);
+    put_page((struct page *)skb);
     free_page(skb);
 
 }
@@ -491,7 +492,7 @@ static void xennet_tx_buf_gc(struct netfront_queue *queue)
 			queue->grant_tx_page[id] = NULL;
 			add_id_to_freelist(&queue->tx_skb_freelist, queue->tx_skbs, id);
             // Amna TODO: releases of skb
-            //xen_kfree_skb(skb);
+            xen_kfree_skb(skb);
 		}
 
 		queue->tx.rsp_cons = prod;
@@ -672,7 +673,6 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     xen_skb = xen_skb_copy(skb, GFP_XEN);
     if (!xen_skb)
         goto drop;
-    skb_shinfo(xen_skb)->nr_frags = skb_shinfo(skb)->nr_frags ;
     printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
     dev_kfree_skb_any(skb);
     skb = xen_skb;
@@ -959,14 +959,14 @@ static int xennet_set_skb_gso(struct sk_buff *skb,
 {
 	if (!gso->u.gso.size) {
 		if (net_ratelimit())
-			pr_warn("GSO size must not be zero\n");
+			printk("GSO size must not be zero\n");
 		return -EINVAL;
 	}
 
 	if (gso->u.gso.type != XEN_NETIF_GSO_TYPE_TCPV4 &&
 	    gso->u.gso.type != XEN_NETIF_GSO_TYPE_TCPV6) {
 		if (net_ratelimit())
-			pr_warn("Bad GSO type %d\n", gso->u.gso.type);
+			printk("Bad GSO type %d\n", gso->u.gso.type);
 		return -EINVAL;
 	}
 
@@ -990,12 +990,12 @@ static RING_IDX xennet_fill_frags(struct netfront_queue *queue,
 	struct skb_shared_info *shinfo = skb_shinfo(skb);
 	RING_IDX cons = queue->rx.rsp_cons;
 	struct sk_buff *nskb;
-
+    printk("xennet_fill_frags %d\n",shinfo->nr_frags);
 	while ((nskb = __skb_dequeue(list))) {
 		struct xen_netif_rx_response *rx =
 			RING_GET_RESPONSE(&queue->rx, ++cons);
 		skb_frag_t *nfrag = &skb_shinfo(nskb)->frags[0];
-
+        printk("xennet_fill_frags  more fragments \n");
 		if (shinfo->nr_frags == MAX_SKB_FRAGS) {
 			unsigned int pull_to = NETFRONT_SKB_CB(skb)->pull_to;
 
@@ -1006,7 +1006,7 @@ static RING_IDX xennet_fill_frags(struct netfront_queue *queue,
 
 		skb_add_rx_frag(skb, shinfo->nr_frags, skb_frag_page(nfrag),
 				rx->offset, rx->status, PAGE_SIZE);
-
+        printk("skb_add_rx_frag %d\n", nskb->len);
 		skb_shinfo(nskb)->nr_frags = 0;
 		kfree_skb(nskb);
 	}
@@ -1068,6 +1068,7 @@ static int handle_incoming_queue(struct netfront_queue *queue,
 		u64_stats_update_end(&rx_stats->syncp);
 
 		/* Pass it up. */
+        printk("napi_gro_receive pass it up length \n",skb->len);
 		napi_gro_receive(&queue->napi, skb);
 	}
 
@@ -1116,7 +1117,6 @@ err:
 		}
 
 		skb = __skb_dequeue(&tmpq);
-
 		if (extras[XEN_NETIF_EXTRA_TYPE_GSO - 1].type) {
 			struct xen_netif_extra_info *gso;
 			gso = &extras[XEN_NETIF_EXTRA_TYPE_GSO - 1];
@@ -1136,6 +1136,7 @@ err:
 		skb_frag_size_set(&skb_shinfo(skb)->frags[0], rx->status);
 		skb->data_len = rx->status;
 		skb->len += rx->status;
+        printk("xennet poll skb dequeue len %d\n", skb->len);
 
 		i = xennet_fill_frags(queue, skb, &tmpq);
 
@@ -1277,9 +1278,10 @@ static netdev_features_t xennet_fix_features(struct net_device *dev,
 	struct netfront_info *np = netdev_priv(dev);
 
 	if (features & NETIF_F_SG &&
-	    !xenbus_read_unsigned(np->xbdev->otherend, "feature-sg", 0))
+	    !xenbus_read_unsigned(np->xbdev->otherend, "feature-sg", 0)){
 		features &= ~NETIF_F_SG;
-
+        printk("netfront does not support SG\n");
+       }
 	if (features & NETIF_F_IPV6_CSUM &&
 	    !xenbus_read_unsigned(np->xbdev->otherend,
 				  "feature-ipv6-csum-offload", 0))

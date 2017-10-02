@@ -773,6 +773,7 @@ __gnttab_map_grant_ref(
 
     gfn = gnttab_shared_remote.v1[op->ref].frame;
     vaddr = hash_search(gfn);
+    printk("gnttab mapped address %lx\n",(unsigned long)vaddr);
     if (op->flags &  GNTMAP_host_map)
         *(op->host_addr) = (unsigned long)vaddr;
     if (op->flags &  GNTMAP_device_map)

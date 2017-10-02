@@ -3092,6 +3092,8 @@ static inline void skb_free_datagram_locked(struct sock *sk,
 }
 int skb_kill_datagram(struct sock *sk, struct sk_buff *skb, unsigned int flags);
 int skb_copy_bits(const struct sk_buff *skb, int offset, void *to, int len);
+int xen_skb_copy_bits(struct sk_buff *nskb, struct sk_buff *skb, int offset, void *to, int len);
+
 int skb_store_bits(struct sk_buff *skb, int offset, const void *from, int len);
 __wsum skb_copy_and_csum_bits(const struct sk_buff *skb, int offset, u8 *to,
 			      int len, __wsum csum);
