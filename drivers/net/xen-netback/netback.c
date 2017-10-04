@@ -593,11 +593,12 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
         page = alloc_page(GFP_KERNEL);
         if (page != NULL && idx_to_kaddr(queue, pending_idx) != NULL)
         {
-            memcpy(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
+            printk("copying txp->size to alocated page\n", txp->size);
+            memcpy_fromio(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
         }
         else
-            return;
-        
+            return; 
+        //page = virt_to_page(idx_to_kaddr(queue, pending_idx));
         printk("filling skb frags size %d\n",txp->size);
 		__skb_fill_page_desc(skb, i, page, txp->offset, txp->size);
 		skb->len += txp->size;

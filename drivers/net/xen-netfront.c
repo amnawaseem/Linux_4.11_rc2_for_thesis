@@ -194,7 +194,7 @@ EXPORT_SYMBOL(xen_kfree_skb_list);
 static void xen_skb_free_head(struct sk_buff *skb)
 {
 	unsigned char *head = skb->head;
-    put_page((struct page *)head);
+    
 	if (skb->head_frag)
 		page_frag_free(head);
     
@@ -256,7 +256,6 @@ static void xen_skb_release_all(struct sk_buff *skb)
 void xen_kfree_skb(struct sk_buff *skb)
 {
 	xen_skb_release_all(skb);
-    put_page((struct page *)skb);
     free_page(skb);
 
 }
@@ -665,7 +664,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     u16 queue_index;
     struct sk_buff *nskb;
     struct sk_buff *xen_skb;
-    
+     printk("netfront original xmit skb len %d and skb data len %d\n", skb->len, skb->data_len);
     /* Drop the packet if no queues are set up */
     if (num_queues < 1)
        goto drop;
@@ -714,7 +713,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
        page = virt_to_page(skb->data);
        offset = offset_in_page(skb->data);
     }
-
+    printk("netfront xmit skb len %d and skb data len %d\n", skb->len, skb->data_len);
     len = skb_headlen(skb);
 
     spin_lock_irqsave(&queue->tx_lock, flags);
@@ -730,7 +729,9 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     first_tx = tx = xennet_make_first_txreq(queue, skb,
                        page, offset, len);
     offset += tx->size;
+    printk("netfront xmit first tx size %d\n",tx->size);
     if (offset == PAGE_SIZE) {
+       printk("offset is = to page size\n");
        page++;
        offset = 0;
     }

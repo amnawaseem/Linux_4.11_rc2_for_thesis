@@ -188,7 +188,7 @@ static void xenvif_rx_copy_add(struct xenvif_queue *queue,
 		op->flags |= GNTCOPY_source_gref;
 	} else {
 		op->source.u.gmfn = virt_to_gfn(data);
-		op->source.domid  = DOMID_SELF;
+		op->source.domid  = CONFIG_XEN_DOM_ID;
 	}
 
 	op->source.offset = xen_offset_in_page(data);

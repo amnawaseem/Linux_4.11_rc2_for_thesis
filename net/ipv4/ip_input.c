@@ -469,6 +469,7 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 		goto csum_error;
 
 	len = ntohs(iph->tot_len);
+    printk("ip rcv skb->len %d and total len %d\n ", skb->len, len);
 	if (skb->len < len) {
 		__IP_INC_STATS(net, IPSTATS_MIB_INTRUNCATEDPKTS);
 		goto drop;

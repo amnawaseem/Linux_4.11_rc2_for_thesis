@@ -772,8 +772,8 @@ __gnttab_map_grant_ref(
     }
 
     gfn = gnttab_shared_remote.v1[op->ref].frame;
+    printk("mapped gfn %lx\n",gfn);
     vaddr = hash_search(gfn);
-    printk("gnttab mapped address %lx\n",(unsigned long)vaddr);
     if (op->flags &  GNTMAP_host_map)
         *(op->host_addr) = (unsigned long)vaddr;
     if (op->flags &  GNTMAP_device_map)
@@ -825,13 +825,13 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
         src_virt = hash_search(gfn);
         
         if (src_virt == NULL){
-            op->status = GNTST_okay;
+            op->status = GNTST_bad_virt_addr;
             return;
         }
 
         dest_virt = gfn_to_virt(op->dest.u.gmfn);
        
-        memcpy((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,op->len);
+        memcpy_fromio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,op->len);
 
     }
     else if (op->flags & GNTCOPY_dest_gref)
@@ -839,11 +839,11 @@ void gnttab_batch_copy(struct gnttab_copy *batch, unsigned count)
         gfn = gnttab_shared_remote.v1[op->dest.u.ref].frame;
         dest_virt = hash_search(gfn);
         if (dest_virt == NULL){
-            op->status = GNTST_okay;
+            op->status = GNTST_bad_virt_addr;
             return;
         }
         src_virt = gfn_to_virt(op->source.u.gmfn);
-        memcpy((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,
+        memcpy_toio((unsigned long)dest_virt + op->dest.offset, (unsigned long)src_virt + op->source.offset,
            op->len);
 
     }
@@ -867,7 +867,7 @@ void gnttab_foreach_grant_in_range(struct page *page,
 	goffset = xen_offset_in_page(offset);
     page_address = page_to_phys(page); 
 	xen_pfn = page_address >>  XEN_PAGE_SHIFT +  XEN_PFN_DOWN(offset);
-
+    printk("netfront tx pfn %lx\n", xen_pfn);
 	while (len) {
 		glen = min_t(unsigned int, XEN_PAGE_SIZE - goffset, len);
 		fn((xen_pfn), goffset, glen, data);
