@@ -261,7 +261,7 @@ struct vm_area_struct;
 #ifdef CONFIG_ZONE_DMA32
 #define GFP_DMA32	__GFP_DMA32
 #else
-#define GFP_XEN     __GFP_XEN
+#define GFP_XEN     (__GFP_XEN | __GFP_ATOMIC) 
 #endif
 #define GFP_HIGHUSER	(GFP_USER | __GFP_HIGHMEM)
 #define GFP_HIGHUSER_MOVABLE	(GFP_HIGHUSER | __GFP_MOVABLE)

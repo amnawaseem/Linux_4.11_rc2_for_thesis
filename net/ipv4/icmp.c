@@ -945,7 +945,7 @@ static bool icmp_echo(struct sk_buff *skb)
 		icmp_param.offset	   = 0;
 		icmp_param.data_len	   = skb->len;
 		icmp_param.head_len	   = sizeof(struct icmphdr);
-        printk("icmp echo Number of frags %d\n",skb_shinfo(skb)->nr_frags);
+        //printk("icmp echo Number of frags %d\n",skb_shinfo(skb)->nr_frags);
 		icmp_reply(&icmp_param, skb);
 	}
 	/* should there be an ICMP stat for ignored echos? */
@@ -1045,7 +1045,7 @@ int icmp_rcv(struct sk_buff *skb)
 	 */
 	if (icmph->type > NR_ICMP_TYPES)
 		goto error;
-    printk("icmp recv skb length %d\n", skb->len);
+   // printk("icmp recv skb length %d\n", skb->len);
 
 	/*
 	 *	Parse the ICMP message
@@ -1070,24 +1070,24 @@ int icmp_rcv(struct sk_buff *skb)
 			goto error;
 		}
 	}
-    printk("icmp recv header type %d skb len %d\n", icmph->type,skb->len);
+   // printk("icmp recv header type %d skb len %d\n", icmph->type,skb->len);
 	success = icmp_pointers[icmph->type].handler(skb);
 
 	if (success)  {
-        printk("icmp recv success %d\n", skb->len);
+       // printk("icmp recv success %d\n", skb->len);
 		consume_skb(skb);
 		return NET_RX_SUCCESS;
 	}
 
 drop:
 	kfree_skb(skb);
-    printk("icmp recv dropped %d\n", skb->len);
+    //printk("icmp recv dropped %d\n", skb->len);
 	return NET_RX_DROP;
 csum_error:
 	__ICMP_INC_STATS(net, ICMP_MIB_CSUMERRORS);
-    printk("icmp recv dropped checksum errors %d\n", skb->len);
+    //printk("icmp recv dropped checksum errors %d\n", skb->len);
 error:
-    printk("icmp recv dropped  mid in hdr errors %d\n", skb->len);
+    //printk("icmp recv dropped  mid in hdr errors %d\n", skb->len);
 	__ICMP_INC_STATS(net, ICMP_MIB_INERRORS);
 	goto drop;
 }

@@ -169,6 +169,8 @@ gnttab_set_unmap_op(struct gnttab_unmap_grant_ref *unmap, phys_addr_t *addr,
 
 
 int arch_gnttab_init(unsigned long nr_shared);
+void memcpy_xen(void *dest, const void *src, unsigned long length);
+
 int arch_gnttab_map_shared(xen_pfn_t *frames, unsigned long nr_gframes,
 			   unsigned long max_nr_gframes,
 			   void **__shared);

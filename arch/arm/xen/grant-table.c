@@ -45,7 +45,40 @@ struct DataItem {
 };
 
 struct DataItem hashArray[SIZE_ARRAY]; 
+#define WORDSIZE 64
+#define MWORD_ALIGNMENT_MASK	((WORDSIZE >> 3) - 1)
 
+void memcpy_xen(void *dest, const void *src, unsigned long length) {
+	if (((unsigned long)dest | (unsigned long)src | length) & MWORD_ALIGNMENT_MASK) {
+		unsigned char *_dest8 = dest;
+		const unsigned char *_src8 = src;
+
+		while (length > 0) {
+			*(_dest8++) = *(_src8++);
+			--length;
+		}
+	} else {
+#if WORDSIZE == 32
+		u32 *_dest32 = dest;
+		const u32 *_src32 = src;
+
+		while (length > 0) {
+			*(_dest32++) = *(_src32++);
+			length -= 4;
+		}
+#elif WORDSIZE == 64
+		u64 *_dest64 = dest;
+		const u64 *_src64 = src;
+
+		while (length > 0) {
+			*(_dest64++) = *(_src64++);
+			length -= 8;
+		}
+#else
+# error Unsupported word size.
+#endif
+	}
+}
 
 static void display(void);
 

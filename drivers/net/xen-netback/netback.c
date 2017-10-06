@@ -118,7 +118,7 @@ static inline unsigned long idx_to_kaddr(struct xenvif_queue *queue,
 					 u16 idx)
 {
 	//return (unsigned long)(idx_to_pfn(queue, idx));
-	printk("mapped address is %lx\n",(unsigned long)queue->mapped_address[idx]);
+	//printk("mapped address is %lx\n",(unsigned long)queue->mapped_address[idx]);
 	return  (unsigned long)queue->mapped_address[idx]; 
 }
 
@@ -593,13 +593,13 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
         page = alloc_page(GFP_KERNEL);
         if (page != NULL && idx_to_kaddr(queue, pending_idx) != NULL)
         {
-            printk("copying txp->size to alocated page\n", txp->size);
+            //printk("copying txp->size to alocated page\n", txp->size);
             memcpy_fromio(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
         }
         else
             return; 
         //page = virt_to_page(idx_to_kaddr(queue, pending_idx));
-        printk("filling skb frags size %d\n",txp->size);
+        //printk("filling skb frags size %d\n",txp->size);
 		__skb_fill_page_desc(skb, i, page, txp->offset, txp->size);
 		skb->len += txp->size;
 		skb->data_len += txp->size;
@@ -888,7 +888,7 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
 
 		ret = xenvif_count_requests(queue, &txreq, extra_count,
 					    txfrags, work_to_do);
-        printk("xenvif_count_requests %d\n",ret);
+        //printk("xenvif_count_requests %d\n",ret);
 		if (unlikely(ret < 0))
 			break;
 
@@ -913,11 +913,11 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
 
 		index = pending_index(queue->pending_cons);
 		pending_idx = queue->pending_ring[index];
-        printk("txreq.size %d\n",txreq.size);
+        //printk("txreq.size %d\n",txreq.size);
 		data_len = (txreq.size > XEN_NETBACK_TX_COPY_LEN &&
 			    ret < XEN_NETBK_LEGACY_SLOTS_MAX) ?
 			XEN_NETBACK_TX_COPY_LEN: txreq.size ;
-        printk("xenvif_alloc_skb data_len %d\n",data_len);
+        //printk("xenvif_alloc_skb data_len %d\n",data_len);
 		skb = xenvif_alloc_skb(data_len);
 		if (unlikely(skb == NULL)) {
 			netdev_dbg(queue->vif->dev,
@@ -929,7 +929,7 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
 		skb_shinfo(skb)->nr_frags = ret;
 		if (data_len < txreq.size)
 			skb_shinfo(skb)->nr_frags++;
-        printk("xenvif_alloc_skb  nr_frags %d\n",skb_shinfo(skb)->nr_frags);
+        //printk("xenvif_alloc_skb  nr_frags %d\n",skb_shinfo(skb)->nr_frags);
 		/* At this point shinfo->nr_frags is in fact the number of
 		 * slots, which can be as large as XEN_NETBK_LEGACY_SLOTS_MAX.
 		 */
@@ -1137,7 +1137,7 @@ static int xenvif_tx_submit(struct xenvif_queue *queue)
 						skb_shinfo(skb)->frag_list;
 				skb_shinfo(nskb)->nr_frags = 0;
 			}
-            printk("remap error code netback tx action \n");
+            //printk("remap error code netback tx action \n");
 			kfree_skb(skb);
 			continue;
 		}

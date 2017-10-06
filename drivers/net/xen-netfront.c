@@ -255,6 +255,11 @@ static void xen_skb_release_all(struct sk_buff *skb)
 
 void xen_kfree_skb(struct sk_buff *skb)
 {
+	if (likely(atomic_read(&skb->users) == 1))
+		smp_rmb();
+	else if (likely(!atomic_dec_and_test(&skb->users)))
+		return;
+
 	xen_skb_release_all(skb);
     free_page(skb);
 
@@ -491,6 +496,8 @@ static void xennet_tx_buf_gc(struct netfront_queue *queue)
 			queue->grant_tx_page[id] = NULL;
 			add_id_to_freelist(&queue->tx_skb_freelist, queue->tx_skbs, id);
             // Amna TODO: releases of skb
+            //struct page *pagexen = virt_to_page(skb);
+           // printk("page ref count\n",  atomic_dec_and_test(&pagexen->_refcount));
             xen_kfree_skb(skb);
 		}
 
@@ -664,11 +671,11 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     u16 queue_index;
     struct sk_buff *nskb;
     struct sk_buff *xen_skb;
-     printk("netfront original xmit skb len %d and skb data len %d\n", skb->len, skb->data_len);
+    // printk("netfront original xmit skb len %d and skb data len %d\n", skb->len, skb->data_len);
     /* Drop the packet if no queues are set up */
     if (num_queues < 1)
        goto drop;
-    printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
+   // printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
 
     xen_skb = xen_skb_copy(skb, GFP_XEN);
     if (!xen_skb)
@@ -713,7 +720,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
        page = virt_to_page(skb->data);
        offset = offset_in_page(skb->data);
     }
-    printk("netfront xmit skb len %d and skb data len %d\n", skb->len, skb->data_len);
+    //printk("netfront xmit skb len %d and skb data len %d\n", skb->len, skb->data_len);
     len = skb_headlen(skb);
 
     spin_lock_irqsave(&queue->tx_lock, flags);
@@ -729,9 +736,9 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     first_tx = tx = xennet_make_first_txreq(queue, skb,
                        page, offset, len);
     offset += tx->size;
-    printk("netfront xmit first tx size %d\n",tx->size);
+   // printk("netfront xmit first tx size %d\n",tx->size);
     if (offset == PAGE_SIZE) {
-       printk("offset is = to page size\n");
+      // printk("offset is = to page size\n");
        page++;
        offset = 0;
     }
@@ -770,7 +777,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     /* Requests for all the frags. */
     for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
        skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
-       printk("number of frags xmit %d, skb_frag_page(frag) %lx\n",skb_shinfo(skb)->nr_frags,page_to_phys(skb_frag_page(frag)));
+      // printk("number of frags xmit %d, skb_frag_page(frag) %lx\n",skb_shinfo(skb)->nr_frags,page_to_phys(skb_frag_page(frag)));
        tx = xennet_make_txreqs(queue, tx, skb,
                    skb_frag_page(frag), frag->page_offset,
                    skb_frag_size(frag));
@@ -992,12 +999,12 @@ static RING_IDX xennet_fill_frags(struct netfront_queue *queue,
 	struct skb_shared_info *shinfo = skb_shinfo(skb);
 	RING_IDX cons = queue->rx.rsp_cons;
 	struct sk_buff *nskb;
-    printk("xennet_fill_frags %d\n",shinfo->nr_frags);
+    //printk("xennet_fill_frags %d\n",shinfo->nr_frags);
 	while ((nskb = __skb_dequeue(list))) {
 		struct xen_netif_rx_response *rx =
 			RING_GET_RESPONSE(&queue->rx, ++cons);
 		skb_frag_t *nfrag = &skb_shinfo(nskb)->frags[0];
-        printk("xennet_fill_frags  more fragments \n");
+        //printk("xennet_fill_frags  more fragments \n");
 		if (shinfo->nr_frags == MAX_SKB_FRAGS) {
 			unsigned int pull_to = NETFRONT_SKB_CB(skb)->pull_to;
 
@@ -1008,7 +1015,7 @@ static RING_IDX xennet_fill_frags(struct netfront_queue *queue,
 
 		skb_add_rx_frag(skb, shinfo->nr_frags, skb_frag_page(nfrag),
 				rx->offset, rx->status, PAGE_SIZE);
-        printk("skb_add_rx_frag %d\n", nskb->len);
+        //printk("skb_add_rx_frag %d\n", nskb->len);
 		skb_shinfo(nskb)->nr_frags = 0;
 		kfree_skb(nskb);
 	}
@@ -1070,7 +1077,7 @@ static int handle_incoming_queue(struct netfront_queue *queue,
 		u64_stats_update_end(&rx_stats->syncp);
 
 		/* Pass it up. */
-        printk("napi_gro_receive pass it up length \n",skb->len);
+        //printk("napi_gro_receive pass it up length \n",skb->len);
 		napi_gro_receive(&queue->napi, skb);
 	}
 
@@ -1138,7 +1145,7 @@ err:
 		skb_frag_size_set(&skb_shinfo(skb)->frags[0], rx->status);
 		skb->data_len = rx->status;
 		skb->len += rx->status;
-        printk("xennet poll skb dequeue len %d\n", skb->len);
+        //printk("xennet poll skb dequeue len %d\n", skb->len);
 
 		i = xennet_fill_frags(queue, skb, &tmpq);
 
@@ -1282,7 +1289,7 @@ static netdev_features_t xennet_fix_features(struct net_device *dev,
 	if (features & NETIF_F_SG &&
 	    !xenbus_read_unsigned(np->xbdev->otherend, "feature-sg", 0)){
 		features &= ~NETIF_F_SG;
-        printk("netfront does not support SG\n");
+        //printk("netfront does not support SG\n");
        }
 	if (features & NETIF_F_IPV6_CSUM &&
 	    !xenbus_read_unsigned(np->xbdev->otherend,

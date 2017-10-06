@@ -772,7 +772,7 @@ __gnttab_map_grant_ref(
     }
 
     gfn = gnttab_shared_remote.v1[op->ref].frame;
-    printk("mapped gfn %lx\n",gfn);
+    //printk("mapped gfn %lx\n",gfn);
     vaddr = hash_search(gfn);
     if (op->flags &  GNTMAP_host_map)
         *(op->host_addr) = (unsigned long)vaddr;
@@ -867,7 +867,7 @@ void gnttab_foreach_grant_in_range(struct page *page,
 	goffset = xen_offset_in_page(offset);
     page_address = page_to_phys(page); 
 	xen_pfn = page_address >>  XEN_PAGE_SHIFT +  XEN_PFN_DOWN(offset);
-    printk("netfront tx pfn %lx\n", xen_pfn);
+    //printk("netfront tx pfn %lx\n", xen_pfn);
 	while (len) {
 		glen = min_t(unsigned int, XEN_PAGE_SIZE - goffset, len);
 		fn((xen_pfn), goffset, glen, data);
@@ -1240,7 +1240,7 @@ int gnttab_init(void)
 	gnttab_free_count = nr_init_grefs - NR_RESERVED_ENTRIES;
 	gnttab_free_head  = NR_RESERVED_ENTRIES;
 
-	printk("Grant table initialized\n");
+	//printk("Grant table initialized\n");
 	return 0;
 
  ini_nomem:
