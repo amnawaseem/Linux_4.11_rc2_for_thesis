@@ -6336,7 +6336,7 @@ struct ieee80211_hw *wlcore_alloc_hw(size_t priv_size, u32 aggr_buf_size,
 		ret = -ENOMEM;
 		goto err_mbox;
 	}
-
+    printk("wlcore alloc hw successful\n");
 	return hw;
 
 err_mbox:
@@ -6515,15 +6515,19 @@ static void wlcore_nvs_cb(const struct firmware *fw, void *context)
 		goto out_unreg;
 
 	wl->initialized = true;
+    printk("wlcore nvs cb successful\n");
 	goto out;
 
 out_unreg:
+    printk("wl1271_unregister_hw\n");
 	wl1271_unregister_hw(wl);
 
 out_irq:
+    printk("wl1271_free_irq\n");
 	free_irq(wl->irq, wl);
 
 out_free_nvs:
+    printk("out_free_nvs\n");
 	kfree(wl->nvs);
 
 out:
@@ -6549,12 +6553,15 @@ int wlcore_probe(struct wl1271 *wl, struct platform_device *pdev)
 		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
 					      nvs_name, &pdev->dev, GFP_KERNEL,
 					      wl, wlcore_nvs_cb);
+        
 		if (ret < 0) {
+            printk("request_firmware_nowait failed \n");
 			wl1271_error("request_firmware_nowait failed for %s: %d",
 				     nvs_name, ret);
 			complete_all(&wl->nvs_loading_complete);
 		}
 	} else {
+	    printk("request_wlcore_nvs_cb \n");
 		wlcore_nvs_cb(NULL, wl);
 	}
 

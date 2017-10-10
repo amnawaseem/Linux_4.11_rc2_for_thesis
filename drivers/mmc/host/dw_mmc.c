@@ -2495,7 +2495,7 @@ static irqreturn_t dw_mci_interrupt(int irq, void *dev_id)
 	struct dw_mci *host = dev_id;
 	u32 pending;
 	int i;
-
+    printk("dw_mci_interrupt called\n");
 	pending = mci_readl(host, MINTSTS); /* read-only mask reg */
 
 	if (pending) {
@@ -2621,11 +2621,12 @@ static int dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 	const struct dw_mci_drv_data *drv_data = host->drv_data;
 	int ctrl_id, ret;
 	u32 freq[2];
-
+    printk("mmc alloc host\n");
 	mmc = mmc_alloc_host(sizeof(struct dw_mci_slot), host->dev);
-	if (!mmc)
+	if (!mmc){
+        printk("mmc alloc host failed\n");
 		return -ENOMEM;
-
+    }
 	slot = mmc_priv(mmc);
 	slot->id = id;
 	slot->sdio_id = host->sdio_id0 + id;
@@ -2648,7 +2649,9 @@ static int dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 	/*if there are external regulators, get them*/
 	ret = mmc_regulator_get_supply(mmc);
 	if (ret == -EPROBE_DEFER)
-		goto err_host_allocated;
+    {   printk("mmc_regulator_get_supply deffered\n");
+	 	goto err_host_allocated;
+    }
 
 	if (!mmc->ocr_avail)
 		mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
@@ -2680,7 +2683,9 @@ static int dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 
 	ret = mmc_of_parse(mmc);
 	if (ret)
+    {   printk("mmc parse error\n");
 		goto err_host_allocated;
+    }
 
 	/* Useful defaults if platform data is unset. */
 	if (host->use_dma == TRANS_MODE_IDMAC) {
@@ -2710,7 +2715,9 @@ static int dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 
 	ret = mmc_add_host(mmc);
 	if (ret)
+    {   printk("mmc add host failed\n");
 		goto err_host_allocated;
+    }
 
 #if defined(CONFIG_DEBUG_FS)
 	dw_mci_init_debugfs(slot);
@@ -3198,6 +3205,7 @@ int dw_mci_probe(struct dw_mci *host)
 		host->fifo_reg = host->regs + DATA_240A_OFFSET;
 
 	tasklet_init(&host->tasklet, dw_mci_tasklet_func, (unsigned long)host);
+    printk("request dwmcc2 irq %d\n",host->irq);
 	ret = devm_request_irq(host->dev, host->irq, dw_mci_interrupt,
 			       host->irq_flags, "dw-mci", host);
 	if (ret)
@@ -3240,7 +3248,7 @@ int dw_mci_probe(struct dw_mci *host)
 	}
 
 	if (init_slots) {
-		dev_info(host->dev, "%d slots initialized\n", init_slots);
+		dev_dbg(host->dev, "%d slots initialized\n", init_slots);
 	} else {
 		dev_dbg(host->dev,
 			"attempted to initialize %d slots, but failed on all\n",
