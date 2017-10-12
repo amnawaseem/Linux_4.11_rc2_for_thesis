@@ -526,7 +526,6 @@ irqreturn_t dwc2_handle_common_intr(int irq, void *dev)
 	struct dwc2_hsotg *hsotg = dev;
 	u32 gintsts;
 	irqreturn_t retval = IRQ_NONE;
-
 	spin_lock(&hsotg->lock);
 
 	if (!dwc2_is_controller_alive(hsotg)) {

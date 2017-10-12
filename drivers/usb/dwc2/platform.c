@@ -411,7 +411,7 @@ static int dwc2_driver_probe(struct platform_device *dev)
 				  dev_name(hsotg->dev), hsotg);
 	if (retval)
 		return retval;
-
+    printk("registered common handler for irq%d\n",hsotg->irq);
 	retval = dwc2_lowlevel_hw_enable(hsotg);
 	if (retval)
 		return retval;

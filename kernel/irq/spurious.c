@@ -202,6 +202,8 @@ static void __report_bad_irq(struct irq_desc *desc, irqreturn_t action_ret)
 	} else {
 		printk(KERN_ERR "irq %d: nobody cared (try booting with "
 				"the \"irqpoll\" option)\n", irq);
+       		printk(KERN_ERR "irq event %d: bogus return value %x\n",
+				irq, action_ret);
 	}
 	dump_stack();
 	printk(KERN_ERR "handlers:\n");
