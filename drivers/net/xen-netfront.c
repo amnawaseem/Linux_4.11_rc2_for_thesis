@@ -1546,8 +1546,9 @@ static int xen_net_read_mac(struct xenbus_device *dev, u8 mac[])
 {
 	char *s, *e, *macstr;
 	int i;
-
+    
 	macstr = s = xenbus_read(XBT_NIL, dev->nodename, "mac", NULL);
+    printk("read mac successful\n");
 	if (IS_ERR(macstr))
 		return PTR_ERR(macstr);
 

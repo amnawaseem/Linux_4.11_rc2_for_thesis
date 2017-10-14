@@ -668,7 +668,7 @@ int xenvif_connect_data(struct xenvif_queue *queue,
 	}
 
 	queue->stalled = true;
-
+    printk("xenvif_kthread_guest_rx started \n");
 	task = kthread_create(xenvif_kthread_guest_rx,
 			      (void *)queue, "%s-guest-rx", queue->name);
 	if (IS_ERR(task)) {

@@ -388,7 +388,7 @@ static int dwc2_driver_probe(struct platform_device *dev)
 	hsotg->regs = devm_ioremap_resource(&dev->dev, res);
 	if (IS_ERR(hsotg->regs))
 		return PTR_ERR(hsotg->regs);
-
+    printk("mapped PA %08lx to VA %p\n",(unsigned long)res->start, hsotg->regs);
 	dev_dbg(&dev->dev, "mapped PA %08lx to VA %p\n",
 		(unsigned long)res->start, hsotg->regs);
 
@@ -411,7 +411,7 @@ static int dwc2_driver_probe(struct platform_device *dev)
 				  dev_name(hsotg->dev), hsotg);
 	if (retval)
 		return retval;
-    printk("registered common handler for irq%d\n",hsotg->irq);
+    printk("registered common handler for irq\n");
 	retval = dwc2_lowlevel_hw_enable(hsotg);
 	if (retval)
 		return retval;

@@ -243,7 +243,7 @@ static void *xs_wait_for_reply(struct xb_req_data *req, struct xsd_sockmsg *msg)
 	void *ret;
 
 	ret = read_reply(req);
-
+    printk("wait for reply successful\n");
 	xs_request_exit(req);
 
 	msg->type = req->msg.type;

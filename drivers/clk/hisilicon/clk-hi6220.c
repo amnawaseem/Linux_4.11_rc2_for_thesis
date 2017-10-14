@@ -185,7 +185,7 @@ static void __init hi6220_clk_sys_init(struct device_node *np)
 	clk_data = hisi_clk_init(np, HI6220_SYS_NR_CLKS);
 	if (!clk_data)
 		return;
-
+  
 	hisi_clk_register_gate_sep(hi6220_separated_gate_clks_sys,
 			ARRAY_SIZE(hi6220_separated_gate_clks_sys), clk_data);
 

@@ -971,6 +971,7 @@ static void connect(struct backend_info *be)
 	read_xenbus_vif_flags(be);
 
 	err = connect_ctrl_ring(be);
+    
 	if (err) {
 		xenbus_dev_fatal(dev, err, "connecting control ring");
 		return;
@@ -997,6 +998,7 @@ static void connect(struct backend_info *be)
 
 		err = xenvif_init_queue(queue);
 		if (err) {
+
 			/* xenvif_init_queue() cleans up after itself on
 			 * failure, but we need to clean up any previously
 			 * initialised queues. Set num_queues to i so that
@@ -1046,7 +1048,6 @@ static void connect(struct backend_info *be)
 		be->have_hotplug_status_watch = 1;
 
 	netif_tx_wake_all_queues(be->vif->dev);
-
 	return;
 
 err:
@@ -1073,7 +1074,6 @@ static int connect_data_rings(struct backend_info *be,
 	char *xspath;
 	size_t xspathsize;
 	const size_t xenstore_path_ext_size = 11; /* sufficient for "/queue-NNN" */
-
 	/* If the frontend requested 1 queue, or we have fallen back
 	 * to single queue due to lack of frontend support for multi-
 	 * queue, expect the remaining XenStore keys in the toplevel
@@ -1174,7 +1174,6 @@ static int read_xenbus_vif_flags(struct backend_info *be)
 	}
 
 	vif->can_sg = !!xenbus_read_unsigned(dev->otherend, "feature-sg", 0);
-    printk("vif can sg %d\n",vif->can_sg);
 	vif->gso_mask = 0;
 
 	if (xenbus_read_unsigned(dev->otherend, "feature-gso-tcpv4", 0))
