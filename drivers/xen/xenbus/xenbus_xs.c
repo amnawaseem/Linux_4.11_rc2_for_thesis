@@ -243,7 +243,6 @@ static void *xs_wait_for_reply(struct xb_req_data *req, struct xsd_sockmsg *msg)
 	void *ret;
 
 	ret = read_reply(req);
-    printk("wait for reply successful\n");
 	xs_request_exit(req);
 
 	msg->type = req->msg.type;
@@ -320,6 +319,7 @@ static void *xs_talkv(struct xenbus_transaction t,
 	xs_send(req, &msg);
 
 	ret = xs_wait_for_reply(req, &msg);
+    printk("wait reply successful\n");
 	if (len)
 		*len = msg.len;
 
