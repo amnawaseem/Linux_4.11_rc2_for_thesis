@@ -514,7 +514,6 @@ static inline int clk_prepare_enable(struct clk *clk)
 	ret = clk_enable(clk);
 	if (ret)
 		clk_unprepare(clk);
-
 	return ret;
 }
 

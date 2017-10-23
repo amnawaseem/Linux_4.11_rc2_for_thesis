@@ -675,7 +675,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     /* Drop the packet if no queues are set up */
     if (num_queues < 1)
        goto drop;
-   // printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
+    //printk("Number of frags %d\n",skb_shinfo(skb)->nr_frags);
 
     xen_skb = xen_skb_copy(skb, GFP_XEN);
     if (!xen_skb)
@@ -683,7 +683,7 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     
     dev_kfree_skb_any(skb);
     skb = xen_skb;
-    
+   // printk("Number of frags  after copy%d\n",skb_shinfo(skb)->nr_frags);
     /* Determine which queue to transmit this SKB on */
     queue_index = skb_get_queue_mapping(skb);
     queue = &np->queues[queue_index];
@@ -772,12 +772,13 @@ static int xennet_start_xmit(struct sk_buff *skb, struct net_device *dev)
     }
 
     /* Requests for the rest of the linear area. */
+   // printk("xennet_make_txreqs len %d\n\r",len );
     tx = xennet_make_txreqs(queue, tx, skb, page, offset, len);
 
     /* Requests for all the frags. */
     for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
        skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
-      // printk("number of frags xmit %d, skb_frag_page(frag) %lx\n",skb_shinfo(skb)->nr_frags,page_to_phys(skb_frag_page(frag)));
+       //printk("number of frags xmit %d, skb_frag_page(frag) %lx\n",skb_shinfo(skb)->nr_frags,page_to_phys(skb_frag_page(frag)));
        tx = xennet_make_txreqs(queue, tx, skb,
                    skb_frag_page(frag), frag->page_offset,
                    skb_frag_size(frag));
@@ -1548,7 +1549,7 @@ static int xen_net_read_mac(struct xenbus_device *dev, u8 mac[])
 	int i;
     
 	macstr = s = xenbus_read(XBT_NIL, dev->nodename, "mac", NULL);
-    printk("read mac successful\n");
+    //printk("read mac successful\n");
 	if (IS_ERR(macstr))
 		return PTR_ERR(macstr);
 
@@ -1648,6 +1649,7 @@ static int setup_netfront(struct xenbus_device *dev,
 	queue->tx.sring = NULL;
 
 	txs = (struct xen_netif_tx_sring *)get_zeroed_page(GFP_XEN );
+
 	if (!txs) {
 		err = -ENOMEM;
 		xenbus_dev_fatal(dev, err, "allocating tx ring page");
@@ -1661,7 +1663,8 @@ static int setup_netfront(struct xenbus_device *dev,
 		goto grant_tx_ring_fail;
 	queue->tx_ring_ref = gref;
 
-	rxs = (struct xen_netif_rx_sring *)get_zeroed_page(GFP_XEN);
+	rxs = (struct xen_netif_rx_sring *)get_zeroed_page(GFP_XEN );
+
 	if (!rxs) {
 		err = -ENOMEM;
 		xenbus_dev_fatal(dev, err, "allocating rx ring page");

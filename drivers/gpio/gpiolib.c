@@ -1241,15 +1241,15 @@ int gpiochip_add_data(struct gpio_chip *chip, void *data)
 	status = gpiochip_set_desc_names(chip);
 	if (status)
 		goto err_remove_from_list;
-
+    printk("gpiochip_set_desc_names successful\n");
 	status = gpiochip_irqchip_init_valid_mask(chip);
 	if (status)
 		goto err_remove_from_list;
-
+    printk("gpiochip_irqchip_init_valid_mask successful\n");
 	status = of_gpiochip_add(chip);
 	if (status)
 		goto err_remove_chip;
-
+    printk("of_gpiochip_add successful\n");
 	acpi_gpiochip_add(chip);
 
 	/*

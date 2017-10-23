@@ -593,11 +593,10 @@ static void xenvif_fill_frags(struct xenvif_queue *queue, struct sk_buff *skb)
         page = alloc_page(GFP_KERNEL);
         if (page != NULL && idx_to_kaddr(queue, pending_idx) != NULL)
         {
-            //printk("copying txp->size to alocated page\n", txp->size);
-            memcpy_fromio(page_address(page), idx_to_kaddr(queue, pending_idx),txp->size);
+            memcpy_fromio(page_to_virt(page), idx_to_kaddr(queue, pending_idx),txp->size);
         }
         else
-            return; 
+            return;  
         //page = virt_to_page(idx_to_kaddr(queue, pending_idx));
         //printk("filling skb frags size %d\n",txp->size);
 		__skb_fill_page_desc(skb, i, page, txp->offset, txp->size);
@@ -888,7 +887,6 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
 
 		ret = xenvif_count_requests(queue, &txreq, extra_count,
 					    txfrags, work_to_do);
-        //printk("xenvif_count_requests %d\n",ret);
 		if (unlikely(ret < 0))
 			break;
 
@@ -913,10 +911,10 @@ static void xenvif_tx_build_gops(struct xenvif_queue *queue,
 
 		index = pending_index(queue->pending_cons);
 		pending_idx = queue->pending_ring[index];
-        //printk("txreq.size %d\n",txreq.size);
 		data_len = (txreq.size > XEN_NETBACK_TX_COPY_LEN &&
-			    ret < XEN_NETBK_LEGACY_SLOTS_MAX) ?
-			XEN_NETBACK_TX_COPY_LEN: txreq.size ;
+			  ret < XEN_NETBK_LEGACY_SLOTS_MAX) ?
+			  XEN_NETBACK_TX_COPY_LEN: txreq.size ;
+
         //printk("xenvif_alloc_skb data_len %d\n",data_len);
 		skb = xenvif_alloc_skb(data_len);
 		if (unlikely(skb == NULL)) {
@@ -1474,7 +1472,7 @@ int xenvif_map_frontend_data_rings(struct xenvif_queue *queue,
 				     &rx_ring_ref, 1, &addr);
 	if (err)
 		goto err;
-
+    
 	rxs = (struct xen_netif_rx_sring *)addr;
 	BACK_RING_INIT(&queue->rx, rxs, XEN_PAGE_SIZE);
 

@@ -1147,7 +1147,7 @@ struct sk_buff *xen_skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
 	/* Set the tail pointer and length */
 	skb_put(n, skb->len);
 
-	if (skb_copy_bits(skb, -headerlen, n->head, headerlen + skb->len))
+	if (skb_copy_bits( skb, -headerlen, n->head, headerlen + skb->len))
 		BUG();
 
 	copy_skb_header(n, skb);
@@ -1918,6 +1918,7 @@ int xen_skb_copy_bits(struct sk_buff *nskb, struct sk_buff *skb, int offset, voi
 		offset += copy;
 		to     += copy;
 	}
+ 
 
 	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
 		int end;
@@ -1943,6 +1944,7 @@ int xen_skb_copy_bits(struct sk_buff *nskb, struct sk_buff *skb, int offset, voi
 			kunmap_atomic(vaddr);
             __skb_fill_page_desc(nskb, i, virt_to_page(page_addr), f->page_offset,
                          skb_shinfo(skb)->frags[i].size);
+            skb_shinfo(nskb)->nr_frags++;
 			if ((len -= copy) == 0)
 				return 0;
 			offset += copy;
@@ -1950,8 +1952,9 @@ int xen_skb_copy_bits(struct sk_buff *nskb, struct sk_buff *skb, int offset, voi
 		}
 		start = end;
 	}
-
-
+    
+    skb_shinfo(nskb)->nr_frags = i; 
+    
 	skb_walk_frags(skb, frag_iter) {
 		int end;
 
